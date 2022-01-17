@@ -1,0 +1,26 @@
+title:              뚱한개발자 blog
+email:              senghan1992@korea.ac.kr
+description:        분야없는 소소한 개발자 이야기
+# author:             Start Bootstrap
+# baseurl:            "/startbootstrap-clean-blog-jekyll"
+# url:                "https://startbootstrap.github.io"
+
+# Social Profiles
+# twitter_username:   SBootstrap
+github_username:    korea-seunghwan
+facebook_username:  seunghwan_byeon
+instagram_username: seunghwan_byeon
+# linkedin_username:
+
+# Add your google-analytics ID here to activate google analytics
+# google_analytics:   UA-XXXXXXXXX-X # out your google-analytics code
+
+# Build settings
+markdown:           kramdown
+paginate:           5
+paginate_path:      "/posts/page:num/"
+# timezone: Asia/Seoul
+plugins:
+  - jekyll-feed
+  - jekyll-paginate
+  - jekyll-sitemap ## Uncomment this line to silently generate a sitemaps.org compliant sitemap for your Jekyll site
