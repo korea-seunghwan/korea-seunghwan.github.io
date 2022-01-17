@@ -17,9 +17,8 @@ instagram_username: seunghwan_byeon
 
 # Build settings
 markdown:           kramdown
-kramdown:
+highlighter:        route
   input: GFM
-  syntax_highlighter: rouge
 paginate:           5
 paginate_path:      "/posts/page:num/"
 # timezone: Asia/Seoul
