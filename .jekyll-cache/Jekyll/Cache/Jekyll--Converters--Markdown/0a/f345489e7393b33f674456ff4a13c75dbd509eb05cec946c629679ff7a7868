@@ -1,0 +1,185 @@
+I"?<h1 id="swiftui-google-login-구현해보기">SwiftUI Google Login 구현해보기</h1>
+
+<p>
+최근 SwiftUI를 공부하면서 GoogleLogin 및 다양한 Firebase 기능들을 사용해보고 있다. 기존에 backend를 공부해서 직접구현하는 것에 익숙해져있었지만 실제로 구현된 서비스를 활용해보니 신세계를 경험한 듯 하다.
+</p>
+
+<p>
+초반에 좀 해맨 감이 없지 않아 있어서 조금이라도 도움이 되고자, 나에게 기억을 남기고자 기록을 남겨보고자 한다.
+</p>
+
+<h2 id="firebase-console에-project-생성하기">Firebase console에 project 생성하기</h2>
+<p align="center">
+<img src="/img/swiftui_google_login/firebase_create_project.png" width="50%" />
+</p>
+
+<p> 생성하고 난 후 iOS 설정 </p>
+<p align="center">
+<img src="/img/swiftui_google_login/firebase_create_project_2.png" width="50%" />
+</p>
+
+<p>bundle의 경우는 xcode의 info.plist에서 확인할 수 있다.</p>
+<p align="center">
+<img src="/img/swiftui_google_login/firebase_create_project_4.png" width="50%" />
+</p>
+<p>
+이게 중요하다. GoogleService-Info.plist 파일을 받아서 프로젝트 폴더 안으로 넣어주자.
+</p>
+
+<p>Xcode를 실행 후 GoogleService-Info 파일을 보면, "REVERSED_CLIENT_ID" tab이 있다. value값을 복사하자.</p>
+
+<p>
+해당 프로젝트의 설정 파일에서 Info tab으로 가자. 맨 아래에 URL Types라고 있다. 해당부분을 클릭 후, 표시된 부분에 붙여넣자. Identifier, Icon등 다른 부분은 비워둬도 된다. 나의 경우 이부분에서 좀 해맸다. 뭔가 좀 덜 채운 느낌이라 이것저것 건드려보다가 다른 결과를 초래했다.
+</p>
+<p><img src="/img/swiftui_google_login/firebase_create_project_5.png" /></p>
+
+<p>
+이제 setting은 거의 다 끝났다. 이제 실제로 로그인을 구현해보자.
+</p>
+
+<p align="center">
+<img src="/img/swiftui_google_login/firebase_create_project_7.png" width="30%" />
+<img src="/img/swiftui_google_login/firebase_create_project_8.png" width="30%" />
+</p>
+
+<p>
+위 그림은 내가 지금 toy 프로젝트로 하는 프로젝트이다.
+</p>
+
+<p>
+먼저 내가 생성한 프로젝트의 App.swift 파일에 FirebaseApp.configure()를 통해서 initialize를 해준다.
+
+나는 podfile로 firebase plugin을 추가했는데 다른 방법들도 있으니 검색해서 자기에게 맞는 방식으로 추가하면 될 것같다. (검색어: swift podfile 로 검색하면 다른 다양한 방법도 같이 검색 결과가 나올 것이다.)
+</p>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">struct</span> <span class="kt">LableCoinApp</span><span class="p">:</span> <span class="kt">App</span> <span class="p">{</span>
+    <span class="c1">// MARK: - PROPERTIES</span>
+    <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nf">setupAuthentication</span><span class="p">()</span>
+    <span class="p">}</span>
+    
+    <span class="kd">@StateObject</span> <span class="k">var</span> <span class="nv">authViewModel</span> <span class="o">=</span> <span class="kt">AuthViewModel</span><span class="p">()</span>
+    
+    <span class="k">var</span> <span class="nv">body</span><span class="p">:</span> <span class="kd">some</span> <span class="kt">Scene</span> <span class="p">{</span>
+        <span class="kt">WindowGroup</span> <span class="p">{</span>
+            <span class="kt">ContentView</span><span class="p">()</span>
+                <span class="o">.</span><span class="nf">environmentObject</span><span class="p">(</span><span class="n">authViewModel</span><span class="p">)</span>
+            
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">extension</span> <span class="kt">LableCoinApp</span> <span class="p">{</span>
+    <span class="kd">private</span> <span class="kd">func</span> <span class="nf">setupAuthentication</span><span class="p">()</span> <span class="p">{</span>
+        <span class="kt">FirebaseApp</span><span class="o">.</span><span class="nf">configure</span><span class="p">()</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>
+initialize를 다했다면, 실제로 기능을 구현할 AuthViewModel.swift를 생성해주고 아래의 코드를 보자. 필자는 LoginState를 설정해서 로그인 상태를 구분했다. checkLogin의 경우 요새 거의 모든 앱에 적용되어있는 기능인 자동로그인 기능을 구현하는 함수이다. 이전에 로그인 기록이 있다면 알아서 로그인이 되는 엄청 편한 기능이다.
+</p>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">import</span> <span class="kt">Foundation</span>
+<span class="kd">import</span> <span class="kt">GoogleSignIn</span>
+<span class="kd">import</span> <span class="kt">Firebase</span>
+
+<span class="kd">class</span> <span class="kt">AuthViewModel</span><span class="p">:</span> <span class="kt">ObservableObject</span> <span class="p">{</span>
+    
+    <span class="kd">@Published</span> <span class="k">var</span> <span class="nv">isLoading</span><span class="p">:</span> <span class="kt">Bool</span> <span class="o">=</span> <span class="kc">true</span>
+    
+    <span class="c1">// 1. sign status</span>
+    <span class="kd">enum</span> <span class="kt">LoginState</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="n">logIn</span>
+        <span class="k">case</span> <span class="n">logOut</span>
+    <span class="p">}</span>
+    
+    <span class="c1">// 2.</span>
+    <span class="kd">@Published</span> <span class="k">var</span> <span class="nv">state</span><span class="p">:</span> <span class="kt">LoginState</span> <span class="o">=</span> <span class="o">.</span><span class="n">logOut</span>
+    
+    <span class="c1">// auth login check</span>
+    <span class="kd">func</span> <span class="nf">checkLogin</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="kt">GIDSignIn</span><span class="o">.</span><span class="n">sharedInstance</span><span class="o">.</span><span class="nf">hasPreviousSignIn</span><span class="p">()</span> <span class="p">{</span>
+            <span class="kt">GIDSignIn</span><span class="o">.</span><span class="n">sharedInstance</span><span class="o">.</span><span class="n">restorePreviousSignIn</span> <span class="p">{</span> <span class="p">[</span><span class="k">unowned</span> <span class="k">self</span><span class="p">]</span> <span class="n">user</span><span class="p">,</span> <span class="n">error</span> <span class="k">in</span>
+                <span class="nf">authenticateUser</span><span class="p">(</span><span class="nv">for</span><span class="p">:</span> <span class="n">user</span><span class="p">,</span> <span class="nv">with</span><span class="p">:</span> <span class="n">error</span><span class="p">)</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="k">else</span> <span class="p">{</span>
+            <span class="n">isLoading</span> <span class="o">=</span> <span class="kc">false</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    
+    <span class="c1">// 3. SignIn() method</span>
+    <span class="kd">func</span> <span class="nf">signIn</span><span class="p">()</span> <span class="p">{</span>
+<span class="c1">//        if GIDSignIn.sharedInstance.hasPreviousSignIn() {</span>
+<span class="c1">//            GIDSignIn.sharedInstance.restorePreviousSignIn { [unowned self] user, error in</span>
+<span class="c1">//                authenticateUser(for: user, with: error)</span>
+<span class="c1">//            }</span>
+<span class="c1">//        } else {</span>
+        <span class="c1">//</span>
+        <span class="k">guard</span> <span class="k">let</span> <span class="nv">clientID</span> <span class="o">=</span> <span class="kt">FirebaseApp</span><span class="o">.</span><span class="nf">app</span><span class="p">()?</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">clientID</span> <span class="k">else</span> <span class="p">{</span> <span class="k">return</span> <span class="p">}</span>
+        
+        <span class="c1">//</span>
+        <span class="k">let</span> <span class="nv">configuration</span> <span class="o">=</span> <span class="kt">GIDConfiguration</span><span class="p">(</span><span class="nv">clientID</span><span class="p">:</span> <span class="n">clientID</span><span class="p">)</span>
+        
+        <span class="c1">//</span>
+        <span class="k">guard</span> <span class="k">let</span> <span class="nv">windowScene</span> <span class="o">=</span> <span class="kt">UIApplication</span><span class="o">.</span><span class="n">shared</span><span class="o">.</span><span class="n">connectedScenes</span><span class="o">.</span><span class="n">first</span> <span class="k">as?</span> <span class="kt">UIWindowScene</span> <span class="k">else</span> <span class="p">{</span> <span class="k">return</span> <span class="p">}</span>
+        <span class="k">guard</span> <span class="k">let</span> <span class="nv">rootViewController</span> <span class="o">=</span> <span class="n">windowScene</span><span class="o">.</span><span class="n">windows</span><span class="o">.</span><span class="n">first</span><span class="p">?</span><span class="o">.</span><span class="n">rootViewController</span> <span class="k">else</span> <span class="p">{</span> <span class="k">return</span> <span class="p">}</span>
+        
+        <span class="c1">//</span>
+        <span class="kt">GIDSignIn</span><span class="o">.</span><span class="n">sharedInstance</span><span class="o">.</span><span class="nf">signIn</span><span class="p">(</span><span class="nv">with</span><span class="p">:</span> <span class="n">configuration</span><span class="p">,</span> <span class="nv">presenting</span><span class="p">:</span> <span class="n">rootViewController</span><span class="p">)</span> <span class="p">{</span> <span class="p">[</span><span class="k">unowned</span> <span class="k">self</span><span class="p">]</span> <span class="n">user</span><span class="p">,</span> <span class="n">error</span> <span class="k">in</span>
+            <span class="nf">authenticateUser</span><span class="p">(</span><span class="nv">for</span><span class="p">:</span> <span class="n">user</span><span class="p">,</span> <span class="nv">with</span><span class="p">:</span> <span class="n">error</span><span class="p">)</span>
+        <span class="p">}</span>
+<span class="c1">//        }</span>
+    <span class="p">}</span> <span class="c1">// end signIn</span>
+    
+    <span class="c1">// authentication</span>
+    <span class="kd">private</span> <span class="kd">func</span> <span class="nf">authenticateUser</span><span class="p">(</span><span class="k">for</span> <span class="nv">user</span><span class="p">:</span> <span class="kt">GIDGoogleUser</span><span class="p">?,</span> <span class="n">with</span> <span class="nv">error</span><span class="p">:</span> <span class="kt">Error</span><span class="p">?)</span> <span class="p">{</span>
+        <span class="c1">// 1</span>
+        <span class="k">if</span> <span class="k">let</span> <span class="nv">error</span> <span class="o">=</span> <span class="n">error</span> <span class="p">{</span>
+            <span class="nf">print</span><span class="p">(</span><span class="n">error</span><span class="o">.</span><span class="n">localizedDescription</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="p">}</span>
+        
+        <span class="n">isLoading</span> <span class="o">=</span> <span class="kc">true</span>
+        
+        <span class="c1">// 2.</span>
+        <span class="k">guard</span> <span class="k">let</span> <span class="nv">authentication</span> <span class="o">=</span> <span class="n">user</span><span class="p">?</span><span class="o">.</span><span class="n">authentication</span><span class="p">,</span> <span class="k">let</span> <span class="nv">idToken</span> <span class="o">=</span> <span class="n">authentication</span><span class="o">.</span><span class="n">idToken</span> <span class="k">else</span> <span class="p">{</span><span class="k">return</span><span class="p">}</span>
+        
+        <span class="k">let</span> <span class="nv">credential</span> <span class="o">=</span> <span class="kt">GoogleAuthProvider</span><span class="o">.</span><span class="nf">credential</span><span class="p">(</span><span class="nv">withIDToken</span><span class="p">:</span> <span class="n">idToken</span><span class="p">,</span> <span class="nv">accessToken</span><span class="p">:</span> <span class="n">authentication</span><span class="o">.</span><span class="n">accessToken</span><span class="p">)</span>
+        
+        <span class="c1">// 3.</span>
+        <span class="kt">Auth</span><span class="o">.</span><span class="nf">auth</span><span class="p">()</span><span class="o">.</span><span class="nf">signIn</span><span class="p">(</span><span class="nv">with</span><span class="p">:</span> <span class="n">credential</span><span class="p">)</span> <span class="p">{</span> <span class="p">[</span><span class="k">unowned</span> <span class="k">self</span><span class="p">]</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span> <span class="k">in</span>
+            <span class="k">if</span> <span class="k">let</span> <span class="nv">error</span> <span class="o">=</span> <span class="n">error</span> <span class="p">{</span>
+                <span class="nf">print</span><span class="p">(</span><span class="n">error</span><span class="o">.</span><span class="n">localizedDescription</span><span class="p">)</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="k">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="o">.</span><span class="n">logIn</span>
+            <span class="p">}</span>
+            <span class="n">isLoading</span> <span class="o">=</span> <span class="kc">false</span>
+        <span class="p">}</span>
+    <span class="p">}</span> <span class="c1">// end authenticationUser</span>
+    
+    <span class="kd">func</span> <span class="nf">signOut</span><span class="p">()</span> <span class="p">{</span>
+        <span class="c1">// 1.</span>
+        <span class="kt">GIDSignIn</span><span class="o">.</span><span class="n">sharedInstance</span><span class="o">.</span><span class="nf">signOut</span><span class="p">()</span>
+        
+        <span class="k">do</span> <span class="p">{</span>
+            <span class="n">isLoading</span> <span class="o">=</span> <span class="kc">true</span>
+            <span class="c1">// 2.</span>
+            <span class="k">try</span> <span class="kt">Auth</span><span class="o">.</span><span class="nf">auth</span><span class="p">()</span><span class="o">.</span><span class="nf">signOut</span><span class="p">()</span>
+            
+            <span class="n">state</span> <span class="o">=</span> <span class="o">.</span><span class="n">logOut</span>
+            <span class="n">isLoading</span> <span class="o">=</span> <span class="kc">false</span>
+        <span class="p">}</span> <span class="k">catch</span> <span class="p">{</span>
+            <span class="nf">print</span><span class="p">(</span><span class="n">error</span><span class="o">.</span><span class="n">localizedDescription</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>
+Login 화면에서 위의 model을 생성해서 기능을 버튼에 붙여주면 된다.
+</p>
+<div class="language-swift highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+</code></pre></div></div>
+:ET
