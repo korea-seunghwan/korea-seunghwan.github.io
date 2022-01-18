@@ -3,6 +3,7 @@ layout: post
 title: "첫번째 게시글"
 subtitle: "드디어 git blog 개설"
 date: 2022-01-17 16:40:00 +0900
+tag: vlog
 # background: '/img/posts/01.jpg'
 ---
 # 시작이 반이다

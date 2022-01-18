@@ -4,6 +4,7 @@ title: "SwiftUI Google Login"
 subtitle: "swiftui google login 구현하기"
 date: 2022-01-17 23:30:00 +0900
 background: '/img/swiftui_google_login/firebase_create_project_3.png'
+tag: iOS
 ---
 # SwiftUI Google Login 구현해보기
 
