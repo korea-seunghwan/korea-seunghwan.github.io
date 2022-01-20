@@ -1,0 +1,319 @@
+I"��<h1 id="swiftui-firebase-기능-사용하기">SwiftUI Firebase 기능 사용하기</h1>
+
+<p>이번 포스트의 목적은 SwiftUI와 Firebase를 연동시키는 기능을 구현함으로써 서버를 직접 구축하는 수고를 덜고자함에 있다.</p>
+
+<p>직접 구현을 하면서 느끼는 거지만 정말 신세계이며 매번 파일 업로드, db 연동등을 직접 서버 구축을 하던 나로서는 편하게 느꼈다.</p>
+
+<h1 id="1-firebase-file-upload">1. Firebase File Upload</h1>
+
+<p>여기서 구현하고자 하는 기능은</p>
+
+<ul>
+    <li>image picker 구현으로 앨범에서 사진 불러오기</li>
+    <li>원하는 사진을 잘 불러왔으면, 그대로 Firebase에 업로드</li>
+    <li>다른 사진을 원한다면 다시 앨범에서 사진 불러온뒤 Firebase storage에 업로드</li>
+</ul>
+
+<p>이렇게 3가지로 구성된다. 먼저 ImagePicker부터 살펴보자.</p>
+
+<p align="center">
+    <img src="/img/swiftui_firebase/upload_screen.png" width="30%" style="margin-right: 60px;" />
+    <img src="/img/swiftui_firebase/upload_screen2.png" width="30%" style="margin-left: 60px;" />
+</p>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">import</span> <span class="kt">SwiftUI</span>
+
+<span class="kd">struct</span> <span class="kt">UploadScreen</span><span class="p">:</span> <span class="kt">View</span> <span class="p">{</span>
+    <span class="c1">// MARK: - PROPERTIES</span>
+    <span class="kd">@State</span> <span class="kd">private</span> <span class="k">var</span> <span class="nv">isShowPhotoLibrary</span> <span class="o">=</span> <span class="kc">false</span>
+    <span class="kd">@State</span> <span class="kd">private</span> <span class="k">var</span> <span class="nv">selectedImage</span><span class="p">:</span> <span class="kt">UIImage</span><span class="p">?</span>
+    
+    <span class="kd">@ObservedObject</span> <span class="k">var</span> <span class="nv">storageManager</span> <span class="o">=</span> <span class="kt">FirebaseStorageManager</span><span class="p">()</span>
+    
+    <span class="k">var</span> <span class="nv">body</span><span class="p">:</span> <span class="kd">some</span> <span class="kt">View</span> <span class="p">{</span>
+        <span class="kt">VStack</span> <span class="p">{</span>
+            
+            <span class="k">if</span> <span class="n">selectedImage</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+                <span class="kt">Image</span><span class="p">(</span><span class="nv">uiImage</span><span class="p">:</span> <span class="n">selectedImage</span><span class="o">!</span><span class="p">)</span>
+                    <span class="o">.</span><span class="nf">resizable</span><span class="p">()</span>
+                    <span class="o">.</span><span class="nf">frame</span><span class="p">(</span><span class="nv">minWidth</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">maxWidth</span><span class="p">:</span> <span class="o">.</span><span class="n">infinity</span><span class="p">)</span>
+                    <span class="o">.</span><span class="nf">scaledToFit</span><span class="p">()</span>
+                    <span class="o">.</span><span class="nf">padding</span><span class="p">()</span>
+            <span class="p">}</span>
+            
+            
+            <span class="kt">Button</span><span class="p">(</span><span class="nv">action</span><span class="p">:</span> <span class="p">{</span>
+                <span class="k">self</span><span class="o">.</span><span class="n">isShowPhotoLibrary</span><span class="o">.</span><span class="nf">toggle</span><span class="p">()</span>
+            <span class="p">})</span> <span class="p">{</span>
+                <span class="kt">HStack</span> <span class="p">{</span>
+                    <span class="kt">Image</span><span class="p">(</span><span class="nv">systemName</span><span class="p">:</span> <span class="s">"photo"</span><span class="p">)</span>
+                        <span class="o">.</span><span class="nf">font</span><span class="p">(</span><span class="o">.</span><span class="nf">system</span><span class="p">(</span><span class="nv">size</span><span class="p">:</span> <span class="mi">20</span><span class="p">))</span>
+                    
+                    <span class="kt">Text</span><span class="p">(</span><span class="s">"Photo Library"</span><span class="p">)</span>
+                        <span class="o">.</span><span class="nf">font</span><span class="p">(</span><span class="o">.</span><span class="n">headline</span><span class="p">)</span>
+                <span class="p">}</span>
+                <span class="o">.</span><span class="nf">frame</span><span class="p">(</span><span class="nv">minWidth</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">maxWidth</span><span class="p">:</span> <span class="o">.</span><span class="n">infinity</span><span class="p">,</span> <span class="nv">minHeight</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">maxHeight</span><span class="p">:</span> <span class="mi">50</span><span class="p">)</span>
+                <span class="o">.</span><span class="nf">background</span><span class="p">(</span><span class="kt">Color</span><span class="o">.</span><span class="n">blue</span><span class="p">)</span>
+                <span class="o">.</span><span class="nf">foregroundColor</span><span class="p">(</span><span class="o">.</span><span class="n">white</span><span class="p">)</span>
+                <span class="o">.</span><span class="nf">cornerRadius</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span>
+                <span class="o">.</span><span class="nf">padding</span><span class="p">(</span><span class="o">.</span><span class="n">horizontal</span><span class="p">)</span>
+            <span class="p">}</span>
+            
+            <span class="k">if</span> <span class="n">selectedImage</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+                <span class="kt">Button</span><span class="p">(</span><span class="nv">action</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="c1">// 가져온 image data upload 하고 selectedImage 빈 이미지로 만들어주는 곳</span>
+                    <span class="k">guard</span> <span class="k">let</span> <span class="nv">selectedImage</span> <span class="o">=</span> <span class="n">selectedImage</span> <span class="k">else</span> <span class="p">{</span>
+                        <span class="k">return</span>
+                    <span class="p">}</span>
+                    <span class="n">storageManager</span><span class="o">.</span><span class="nf">uploadImage</span><span class="p">(</span><span class="nv">image</span><span class="p">:</span> <span class="n">selectedImage</span><span class="p">)</span>
+                    <span class="n">withAnimation</span> <span class="p">{</span>
+                        <span class="k">self</span><span class="o">.</span><span class="n">selectedImage</span> <span class="o">=</span> <span class="kc">nil</span>
+                    <span class="p">}</span>
+                <span class="p">})</span> <span class="p">{</span>
+                    <span class="kt">HStack</span> <span class="p">{</span>
+                        <span class="kt">Image</span><span class="p">(</span><span class="nv">systemName</span><span class="p">:</span> <span class="s">"icloud.and.arrow.up.fill"</span><span class="p">)</span>
+                            <span class="o">.</span><span class="nf">font</span><span class="p">(</span><span class="o">.</span><span class="nf">system</span><span class="p">(</span><span class="nv">size</span><span class="p">:</span> <span class="mi">20</span><span class="p">))</span>
+                        
+                        <span class="kt">Text</span><span class="p">(</span><span class="s">"Upload Image"</span><span class="p">)</span>
+                            <span class="o">.</span><span class="nf">font</span><span class="p">(</span><span class="o">.</span><span class="n">headline</span><span class="p">)</span>
+                    <span class="p">}</span>
+                    <span class="o">.</span><span class="nf">frame</span><span class="p">(</span><span class="nv">minWidth</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">maxWidth</span><span class="p">:</span> <span class="o">.</span><span class="n">infinity</span><span class="p">,</span> <span class="nv">minHeight</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">maxHeight</span><span class="p">:</span> <span class="mi">50</span><span class="p">)</span>
+                    <span class="o">.</span><span class="nf">background</span><span class="p">(</span><span class="kt">Color</span><span class="o">.</span><span class="n">black</span><span class="p">)</span>
+                    <span class="o">.</span><span class="nf">foregroundColor</span><span class="p">(</span><span class="o">.</span><span class="n">white</span><span class="p">)</span>
+                    <span class="o">.</span><span class="nf">cornerRadius</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span>
+                    <span class="o">.</span><span class="nf">padding</span><span class="p">(</span><span class="o">.</span><span class="n">horizontal</span><span class="p">)</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span> <span class="c1">//: VSTACK</span>
+        <span class="o">.</span><span class="nf">sheet</span><span class="p">(</span><span class="nv">isPresented</span><span class="p">:</span> <span class="err">$</span><span class="n">isShowPhotoLibrary</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kt">Upload_ImagePicker</span><span class="p">(</span><span class="nv">image</span><span class="p">:</span> <span class="err">$</span><span class="n">selectedImage</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>위의 코드를 보면 isShowPhotoLibrary 변수가 갤러리를 여는 trigger가 되며, selectedImage 변수는 갤러리에서 선택한 사진을 담아줄 변수이다.</p>
+
+<p>selectedImage에 아무런 이미지도 담겨있지 않을 때에는 업로드 버튼이나 고른 사진을 보일 필요가 없기때문에 코드 상에서 if 문으로 조건을 걸어두었다. 따라서 선택된 사진이 보일 경우에만 사진과 upload button이 보일 것이다.</p>
+
+<p>isShowPhotoLibrary함수로 sheet화면에 따로 구성한 image_picker화면을 띄운다. 그럼 Image_picker 화면을 살펴보자.</p>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">import</span> <span class="kt">SwiftUI</span>
+
+<span class="kd">struct</span> <span class="kt">Upload_ImagePicker</span><span class="p">:</span> <span class="kt">UIViewControllerRepresentable</span> <span class="p">{</span>
+    <span class="kd">@Binding</span> <span class="k">var</span> <span class="nv">image</span><span class="p">:</span> <span class="kt">UIImage</span><span class="p">?</span>
+    <span class="kd">@Environment</span><span class="p">(\</span><span class="o">.</span><span class="n">presentationMode</span><span class="p">)</span> <span class="k">var</span> <span class="nv">mode</span>
+    
+    <span class="kd">func</span> <span class="nf">makeUIViewController</span><span class="p">(</span><span class="nv">context</span><span class="p">:</span> <span class="kt">Context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kd">some</span> <span class="kt">UIViewController</span> <span class="p">{</span>
+        <span class="k">let</span> <span class="nv">picker</span> <span class="o">=</span> <span class="kt">UIImagePickerController</span><span class="p">()</span>
+        <span class="n">picker</span><span class="o">.</span><span class="n">delegate</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">coordinator</span>
+        <span class="k">return</span> <span class="n">picker</span>
+    <span class="p">}</span>
+    
+    <span class="kd">func</span> <span class="nf">makeCoordinator</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">Coordinator</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="kt">Coordinator</span><span class="p">(</span><span class="k">self</span><span class="p">)</span>
+    <span class="p">}</span>
+    
+    <span class="kd">func</span> <span class="nf">updateUIViewController</span><span class="p">(</span><span class="n">_</span> <span class="nv">uiViewController</span><span class="p">:</span> <span class="kt">UIViewControllerType</span><span class="p">,</span> <span class="nv">context</span><span class="p">:</span> <span class="kt">Context</span><span class="p">)</span> <span class="p">{</span>
+        
+    <span class="p">}</span>
+    
+    <span class="kd">class</span> <span class="kt">Coordinator</span><span class="p">:</span> <span class="kt">NSObject</span><span class="p">,</span> <span class="kt">UINavigationControllerDelegate</span><span class="p">,</span> <span class="kt">UIImagePickerControllerDelegate</span> <span class="p">{</span>
+        <span class="k">let</span> <span class="nv">parent</span><span class="p">:</span> <span class="kt">Upload_ImagePicker</span>
+        
+        <span class="nf">init</span><span class="p">(</span><span class="n">_</span> <span class="nv">parent</span><span class="p">:</span> <span class="kt">Upload_ImagePicker</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="p">}</span>
+        
+        <span class="kd">func</span> <span class="nf">imagePickerController</span><span class="p">(</span><span class="n">_</span> <span class="nv">picker</span><span class="p">:</span> <span class="kt">UIImagePickerController</span><span class="p">,</span> <span class="n">didFinishPickingMediaWithInfo</span> <span class="nv">info</span><span class="p">:</span> <span class="p">[</span><span class="kt">UIImagePickerController</span><span class="o">.</span><span class="kt">InfoKey</span> <span class="p">:</span> <span class="kt">Any</span><span class="p">])</span> <span class="p">{</span>
+            <span class="k">guard</span> <span class="k">let</span> <span class="nv">image</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="o">.</span><span class="n">originalImage</span><span class="p">]</span> <span class="k">as?</span> <span class="kt">UIImage</span> <span class="k">else</span> <span class="p">{</span> <span class="k">return</span> <span class="p">}</span>
+            
+            <span class="k">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">image</span> <span class="o">=</span> <span class="n">image</span>
+            <span class="n">withAnimation</span> <span class="p">{</span>
+                <span class="k">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mode</span><span class="o">.</span><span class="n">wrappedValue</span><span class="o">.</span><span class="nf">dismiss</span><span class="p">()</span>                
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>사실 이 글을 적는 필자도 정확하게 언어적으로 어떻게 이게 동작하는지 모르고 검색 + 외워서 사용하는 기능 중 하나이다. 코딩은 전부 이해하고 사용하면 좋지만, 이해가 안가더래도 쭉 한번 구현하자! 가 나의 모토이기 때문에 위의 내용 및 Google에 ‘swiftui image picker’라고 검색하면 다른 설명 잘 되어있는 고수 분들이 많기 때문에 이부분에서의 설명은 일축하겠다.</p>
+
+<p>다만 꼭 알아야되는 것은 @Binding var image 변수가 있는데 이 부분의 경우에는 우리가 이전 화면에서 selectedImage변수가 binding 되어서 넘어온다는 정도는 알고 있어야 한다. 구현하게 되면 아래의 사진과 같이 화면을 구성할 수 있다.</p>
+
+<p align="center">
+    <img src="/img/swiftui_firebase/image_picker.png" width="30%" />
+</p>
+
+<p>원하는 사진을 터치하면 sheet로 올라왔던 Image_Picker 화면이 사라지고 selectedImage에 image정보가 들어가며 화면 구성이 바뀐다.</p>
+
+<h3 id="firebase-file-upload">Firebase File Upload</h3>
+<p>자 이제 본격적으로 선택한 사진을 Firebase에 업로드 해보자. 먼저 Firebase에 자신의 프로젝트를 설정해주고 iOS연동까지 마치자.(앞선 포트트 google login을 구현하는 포스트에 프로젝트 생성관련 내용이 있으니 참고.)</p>
+
+<p>프로젝트를 설정했다면,</p>
+
+<p><img src="/img/swiftui_firebase/firebase_console.png" alt="firebase_console" /></p>
+
+<p>위 그림에 표시한 부분을 눌러 초기 설정을 해준다.</p>
+
+<p>pod ‘Firebase/Storage’ 를 Podfile에 추가해준 뒤, pod install.</p>
+
+<p>이후 firebase기능들을 수행할 swift 파일을 하나 만들어 준다. 필자는 FirebaseStorageManger.swift를 생성해 기존에 model처럼 사용하는 것으로 구성했다.</p>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">import</span> <span class="kt">SwiftUI</span>
+<span class="kd">import</span> <span class="kt">FirebaseStorage</span>
+
+<span class="kd">class</span> <span class="kt">FirebaseStorageManager</span><span class="p">:</span><span class="kt">ObservableObject</span> <span class="p">{</span>
+    <span class="c1">// MARK: - PROPERTIES</span>
+    <span class="kd">private</span> <span class="k">let</span> <span class="nv">storage</span> <span class="o">=</span> <span class="kt">Storage</span><span class="o">.</span><span class="nf">storage</span><span class="p">()</span>
+    
+    <span class="c1">// upload function</span>
+    <span class="kd">func</span> <span class="nf">uploadImage</span><span class="p">(</span><span class="nv">image</span><span class="p">:</span> <span class="kt">UIImage</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// change the type of file. If you don't, file saved in storage will be of type application/octet-stream</span>
+        <span class="k">let</span> <span class="nv">metadata</span> <span class="o">=</span> <span class="kt">StorageMetadata</span><span class="p">()</span>
+        <span class="n">metadata</span><span class="o">.</span><span class="n">contentType</span> <span class="o">=</span> <span class="s">"image/jpg"</span>
+        
+        <span class="c1">// 현재시간을 이미지 이름으로 정한다</span>
+        <span class="k">let</span> <span class="nv">imageName</span> <span class="o">=</span> <span class="kt">UUID</span><span class="p">()</span><span class="o">.</span><span class="n">uuidString</span> <span class="o">+</span> <span class="kt">String</span><span class="p">(</span><span class="kt">Date</span><span class="p">()</span><span class="o">.</span><span class="n">timeIntervalSince1970</span><span class="p">)</span>
+        
+        <span class="c1">// Create a storage reference</span>
+        <span class="k">let</span> <span class="nv">storageRef</span> <span class="o">=</span> <span class="n">storage</span><span class="o">.</span><span class="nf">reference</span><span class="p">()</span><span class="o">.</span><span class="nf">child</span><span class="p">(</span><span class="s">"images/</span><span class="se">\(</span><span class="n">imageName</span><span class="se">)</span><span class="s">.jpg"</span><span class="p">)</span>
+        
+        <span class="c1">// 여기서 resize해줘야 한다</span>
+        
+        <span class="c1">// Convert the image into JPEG and compress the quality to reduce its size</span>
+        <span class="k">let</span> <span class="nv">data</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="nf">jpegData</span><span class="p">(</span><span class="nv">compressionQuality</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="k">let</span> <span class="nv">data</span> <span class="o">=</span> <span class="n">data</span> <span class="p">{</span>
+            <span class="n">storageRef</span><span class="o">.</span><span class="nf">putData</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nv">metadata</span><span class="p">:</span> <span class="n">metadata</span><span class="p">){</span> <span class="p">(</span><span class="n">metadata</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span> <span class="k">in</span>
+                <span class="k">if</span> <span class="k">let</span> <span class="nv">error</span> <span class="o">=</span> <span class="n">error</span> <span class="p">{</span>
+                    <span class="nf">print</span><span class="p">(</span><span class="s">"Error while uploading file: "</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
+                <span class="p">}</span>
+                
+                <span class="k">if</span> <span class="k">let</span> <span class="nv">metadata</span> <span class="o">=</span> <span class="n">metadata</span> <span class="p">{</span>
+                    <span class="nf">print</span><span class="p">(</span><span class="s">"Metadata: "</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span> <span class="c1">// end upload function</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>pod install을 하게 되면 FirebaseStorage를 import 할 수 있다. Firebase storage를 사용하면서 느낀점은 정말 간단하다는 것이다. 위의 storageRef로 내가 Firebase 내에서 저장할 경로를 지정해 줄 수 있다. 보통 AWS S3 서비스에 업로드하는 작업을 진행했었는데 그에 비해 정말 편하다 :)</p>
+
+<h1 id="2-firebase-database">2. Firebase database</h1>
+
+<p>기존의 서버에서 하던대로 이미지를 저장하고 그 경로를 db에 저장하여 이미지를 url로 불러오는 작업을 하기 위해 database에 데이터를 저장하는 작업을 할 것이다.</p>
+
+<p>먼저 Podfile을 열고 pod ‘Firebase/Firestore’ 작성 후 pod install!</p>
+
+<p><img src="/img/swiftui_firebase/firebase_console2.png" alt="firebase_console" /></p>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">import</span> <span class="kt">FirebaseFirestore</span>
+
+<span class="kd">private</span> <span class="k">var</span> <span class="nv">db</span> <span class="o">=</span> <span class="kt">Firestore</span><span class="o">.</span><span class="nf">firestore</span><span class="p">()</span>
+
+<span class="c1">// add image data</span>
+    <span class="kd">func</span> <span class="nf">addImageData</span><span class="p">(</span><span class="nv">data</span><span class="p">:</span> <span class="kt">ImageData</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">do</span> <span class="p">{</span>
+           <span class="k">let</span> <span class="nv">_</span> <span class="o">=</span> <span class="k">try</span> <span class="n">db</span><span class="o">.</span><span class="nf">collection</span><span class="p">(</span><span class="s">"images"</span><span class="p">)</span><span class="o">.</span><span class="nf">addDocument</span><span class="p">(</span><span class="nv">data</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="nf">getDict</span><span class="p">())</span>
+        <span class="p">}</span>
+        <span class="k">catch</span> <span class="p">{</span>
+            <span class="nf">print</span><span class="p">(</span><span class="n">error</span><span class="o">.</span><span class="n">localizedDescription</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span> <span class="c1">// end addImageData function</span>
+</code></pre></div></div>
+<p>이게 끝이다. 정말 간단하다. 위의 Manager class에 함수로 선언한다. 전체 코드는 아래에 작성토록 하겠다.</p>
+
+<p>추가적으로 내가 해멨던 부분을 작성하고자 한다. 보통 이미지를 업로드하고 base url + image name을 통해 url을 만들어 이미지를 불러오는데 처음 Firebase file upload를 하고 나서는 그 경로를 어떻게 잡아야하는지 몰랐다.</p>
+
+<p>많은 검색을 해본 뒤 download url을 file upload시 받을 수 있는 방법이 있었다. 따라서 file upload 하는 부분에서 download url을 얻은 다음 그 정보를 db에 넣어줘야 하는 방법이다.</p>
+
+<p>전체 FirebaseStorageManager.swift를 보면,</p>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">import</span> <span class="kt">SwiftUI</span>
+<span class="kd">import</span> <span class="kt">GoogleSignIn</span>
+<span class="kd">import</span> <span class="kt">FirebaseStorage</span>
+<span class="kd">import</span> <span class="kt">FirebaseFirestore</span>
+
+<span class="kd">class</span> <span class="kt">FirebaseStorageManager</span><span class="p">:</span><span class="kt">ObservableObject</span> <span class="p">{</span>
+    <span class="c1">// MARK: - PROPERTIES</span>
+    <span class="kd">private</span> <span class="k">let</span> <span class="nv">user</span> <span class="o">=</span> <span class="kt">GIDSignIn</span><span class="o">.</span><span class="n">sharedInstance</span><span class="o">.</span><span class="n">currentUser</span>
+    <span class="kd">private</span> <span class="k">let</span> <span class="nv">storage</span> <span class="o">=</span> <span class="kt">Storage</span><span class="o">.</span><span class="nf">storage</span><span class="p">()</span>
+    <span class="kd">private</span> <span class="k">var</span> <span class="nv">db</span> <span class="o">=</span> <span class="kt">Firestore</span><span class="o">.</span><span class="nf">firestore</span><span class="p">()</span>
+    
+    <span class="c1">// add image data</span>
+    <span class="kd">func</span> <span class="nf">addImageData</span><span class="p">(</span><span class="nv">data</span><span class="p">:</span> <span class="kt">ImageData</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">do</span> <span class="p">{</span>
+           <span class="k">let</span> <span class="nv">_</span> <span class="o">=</span> <span class="k">try</span> <span class="n">db</span><span class="o">.</span><span class="nf">collection</span><span class="p">(</span><span class="s">"images"</span><span class="p">)</span><span class="o">.</span><span class="nf">addDocument</span><span class="p">(</span><span class="nv">data</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="nf">getDict</span><span class="p">())</span>
+        <span class="p">}</span>
+        <span class="k">catch</span> <span class="p">{</span>
+            <span class="nf">print</span><span class="p">(</span><span class="n">error</span><span class="o">.</span><span class="n">localizedDescription</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span> <span class="c1">// end addImageData function</span>
+    
+    
+    <span class="c1">// upload function</span>
+    <span class="kd">func</span> <span class="nf">uploadImage</span><span class="p">(</span><span class="nv">image</span><span class="p">:</span> <span class="kt">UIImage</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// change the type of file. If you don't, file saved in storage will be of type application/octet-stream</span>
+        <span class="k">let</span> <span class="nv">metadata</span> <span class="o">=</span> <span class="kt">StorageMetadata</span><span class="p">()</span>
+        <span class="n">metadata</span><span class="o">.</span><span class="n">contentType</span> <span class="o">=</span> <span class="s">"image/jpg"</span>
+        
+        <span class="c1">// 현재시간을 이미지 이름으로 정한다</span>
+        <span class="k">let</span> <span class="nv">imageName</span> <span class="o">=</span> <span class="kt">UUID</span><span class="p">()</span><span class="o">.</span><span class="n">uuidString</span> <span class="o">+</span> <span class="kt">String</span><span class="p">(</span><span class="kt">Date</span><span class="p">()</span><span class="o">.</span><span class="n">timeIntervalSince1970</span><span class="p">)</span>
+        
+        <span class="c1">// Create a storage reference</span>
+        <span class="k">let</span> <span class="nv">storageRef</span> <span class="o">=</span> <span class="n">storage</span><span class="o">.</span><span class="nf">reference</span><span class="p">()</span><span class="o">.</span><span class="nf">child</span><span class="p">(</span><span class="s">"images/</span><span class="se">\(</span><span class="n">imageName</span><span class="se">)</span><span class="s">.jpg"</span><span class="p">)</span>
+        
+        <span class="c1">// 여기서 resize해줘야 한다</span>
+        
+        <span class="c1">// Convert the image into JPEG and compress the quality to reduce its size</span>
+        <span class="k">let</span> <span class="nv">data</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="nf">jpegData</span><span class="p">(</span><span class="nv">compressionQuality</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="k">let</span> <span class="nv">data</span> <span class="o">=</span> <span class="n">data</span> <span class="p">{</span>
+            <span class="n">storageRef</span><span class="o">.</span><span class="nf">putData</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nv">metadata</span><span class="p">:</span> <span class="n">metadata</span><span class="p">){</span> <span class="p">(</span><span class="n">metadata</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span> <span class="k">in</span>
+                <span class="k">if</span> <span class="k">let</span> <span class="nv">error</span> <span class="o">=</span> <span class="n">error</span> <span class="p">{</span>
+                    <span class="nf">print</span><span class="p">(</span><span class="s">"Error while uploading file: "</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
+                <span class="p">}</span>
+                
+                <span class="k">if</span> <span class="k">let</span> <span class="nv">metadata</span> <span class="o">=</span> <span class="n">metadata</span> <span class="p">{</span>
+                    <span class="nf">print</span><span class="p">(</span><span class="s">"Metadata: "</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span>
+                <span class="p">}</span>
+                
+                <span class="n">storageRef</span><span class="o">.</span><span class="n">downloadURL</span><span class="p">{</span> <span class="n">url</span><span class="p">,</span> <span class="n">_</span> <span class="k">in</span>
+                    <span class="k">guard</span> <span class="k">let</span> <span class="nv">url</span> <span class="o">=</span> <span class="n">url</span> <span class="k">else</span> <span class="p">{</span> <span class="k">return</span> <span class="p">}</span>
+                    <span class="c1">// database에도 upload한 이미지의 데이터를 저장해주자</span>
+                    <span class="k">let</span> <span class="nv">imageData</span> <span class="o">=</span> <span class="kt">ImageData</span><span class="p">(</span><span class="nv">image_name</span><span class="p">:</span> <span class="n">url</span><span class="o">.</span><span class="n">absoluteString</span><span class="p">,</span> <span class="nv">image_label</span><span class="p">:</span> <span class="kc">nil</span><span class="p">,</span> <span class="nv">image_category</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">upload_user</span><span class="p">:</span> <span class="k">self</span><span class="o">.</span><span class="n">user</span><span class="p">?</span><span class="o">.</span><span class="n">profile</span><span class="p">?</span><span class="o">.</span><span class="n">email</span> <span class="p">??</span> <span class="s">""</span><span class="p">,</span> <span class="nv">create_date</span><span class="p">:</span> <span class="kt">Date</span><span class="o">.</span><span class="n">now</span><span class="p">,</span> <span class="nv">label_date</span><span class="p">:</span> <span class="kc">nil</span><span class="p">)</span>
+                    
+                    <span class="k">self</span><span class="o">.</span><span class="nf">addImageData</span><span class="p">(</span><span class="nv">data</span><span class="p">:</span> <span class="n">imageData</span><span class="p">)</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span> <span class="c1">// end upload function</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>위와 같이 구성되며 실제로 사용할 때에는, 위에서 우리가 만든 upload screen에서 이미지를 불러온뒤 upload button의 action 부분에 넣어주면 된다.</p>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">Button</span><span class="p">(</span><span class="nv">action</span><span class="p">:</span> <span class="p">{</span>
+    <span class="c1">// 가져온 image data upload 하고 selectedImage 빈 이미지로 만들어주는 곳</span>
+    <span class="k">guard</span> <span class="k">let</span> <span class="nv">selectedImage</span> <span class="o">=</span> <span class="n">selectedImage</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+    <span class="n">storageManager</span><span class="o">.</span><span class="nf">uploadImage</span><span class="p">(</span><span class="nv">image</span><span class="p">:</span> <span class="n">selectedImage</span><span class="p">)</span>
+        <span class="n">withAnimation</span> <span class="p">{</span>
+            <span class="k">self</span><span class="o">.</span><span class="n">selectedImage</span> <span class="o">=</span> <span class="kc">nil</span>
+        <span class="p">}</span>
+    <span class="p">})</span> <span class="p">{</span>
+        <span class="kt">HStack</span> <span class="p">{</span>
+            <span class="kt">Image</span><span class="p">(</span><span class="nv">systemName</span><span class="p">:</span> <span class="s">"icloud.and.arrow.up.fill"</span><span class="p">)</span>
+                <span class="o">.</span><span class="nf">font</span><span class="p">(</span><span class="o">.</span><span class="nf">system</span><span class="p">(</span><span class="nv">size</span><span class="p">:</span> <span class="mi">20</span><span class="p">))</span>
+            
+            <span class="kt">Text</span><span class="p">(</span><span class="s">"Upload Image"</span><span class="p">)</span>
+                <span class="o">.</span><span class="nf">font</span><span class="p">(</span><span class="o">.</span><span class="n">headline</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="o">.</span><span class="nf">frame</span><span class="p">(</span><span class="nv">minWidth</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">maxWidth</span><span class="p">:</span> <span class="o">.</span><span class="n">infinity</span><span class="p">,</span> <span class="nv">minHeight</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">maxHeight</span><span class="p">:</span> <span class="mi">50</span><span class="p">)</span>
+        <span class="o">.</span><span class="nf">background</span><span class="p">(</span><span class="kt">Color</span><span class="o">.</span><span class="n">black</span><span class="p">)</span>
+        <span class="o">.</span><span class="nf">foregroundColor</span><span class="p">(</span><span class="o">.</span><span class="n">white</span><span class="p">)</span>
+        <span class="o">.</span><span class="nf">cornerRadius</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span>
+        <span class="o">.</span><span class="nf">padding</span><span class="p">(</span><span class="o">.</span><span class="n">horizontal</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div></div>
+:ET
