@@ -1,0 +1,106 @@
+---
+layout: post
+title: "코인 자동매매 프로그램 만들기"
+subtitle: "story-1"
+date: 2022-01-28 18:00:00 +0900
+tag: coin
+background: '/img/coin_auto/coin_auto.png'
+---
+
+# 코인 자동매매 프로그램을 만들어보자
+정말 솔직히 코인에는 1도 관심이 없지만 어짜피 주식투자도 하고 이것저것 하고 있고, 프로그램도 만들 수 있는 능력이 있으니 만들어보자~ 하는 심정으로 시작하고자 한다.
+앞으로 몇단계로 나누어서 올리게 될지는 모르겠으나 toy project인 만큼 생각나고 작업을 할 때마다 올려볼 생각이다. 그럼 시작!
+
+## API 사용 신청
+이 과정은 업비트에 가입하고 업비트에서 제공해주는 api 서비스를 활용하기 위한 방법이다. 나는 upbit를 사용하지만 다른 api를 사용하시는 분들은 꼭 upbit가 아니어도 된다.
+
+<img src="/img/coin_auto/coin_auto1.png" width="100%" />
+
+여기서 Open API를 먼저 신청해야한다.
+
+<img src="/img/coin_auto/coin_auto2.png" width="100%" />
+
+여기서 자신이 원하는 기능을 신청하면 되는데, 2번을 보면 특정 IP에서만 실행되게 되어있다. 즉, 자신만의 IP를 가진 서버가 있어야된다는 뜻이다. 아무래도 요새 디지털 범죄가 늘어나다 보니 방지차원에서 있는 항목인 것 같다.
+
+다 하고나면 어떤 환경을 사용해서 개발을 할지 결정해야한다. 필자의 경우 python을 활용해서 할거기 때문에 좀 뒤적뒤적해봤더니 ***pyupbit***라는 모듈이 있었다.
+
+[참고사이트](https://wikidocs.net/31063) - 참고로 나도 여기 보고 공부중이다.
+
+```python
+pip install pyupbit
+
+import pyupbit
+```
+를 해보면 잘 설치되었는지 확인할 수 있다. 잘 설치가 되었다면 문제없이 *import* 될 것이다.
+
+## Ticker 조회
+거래를 하기 위해서는 코인들의 ticker가 필요하다. puupbit의 get_tickers() 함수는 upbit에서 사용할 수 있는 ticker를 가져올 수 있다.
+
+```python
+import pyupbit
+
+tickers = pyupbit.get_tickers()
+print(tickers)
+```
+해주면 코인들의 id 값들이 나오는 것 같다.(코인을 식별하기 위한 정보?)
+
+## 현재가 조회
+자 이제 시세를 알아보자. 원리보다는 어떻게 사용해야하는지에 대해 초점을 맞춰 진행할 생각이다.
+
+```python
+import pyupbit
+
+price = pyupbit.get_current_price("KRW-XRP")
+print(price)
+```
+
+아까 위에서 가져온 ticker 정보로 현재 시세를 조회할 수 있다. 주식으로 치면, 회사 코드 정도 되는 정보인 것 같다. '-'를 기준으로 앞쪽의 시장에서의 뒤쪽의 코인 가격이다.
+좀 헷갈리는데 정리를 해보자면, "KRW-BTC" 가 있다면 *원화시장에서의 비트코인 가격* 이라고 생각하면 된다. 내가 입금을 하고 그 돈으로 코인을 사려면 이런식으로 조회를 해야되는 것 같다.
+
+## 과거 데이터 조회
+기술적 분석에 많이 사용되는 대표적인 지표들이라는데 나는 기술적 분석보다는 추이를 보고자 필요할 것 같다.
+
+```python
+import pyupbit
+
+df = pyupbit.get_ohlcv("KRW-BTC")
+print(df)
+```
+open : 시가
+high: 고가
+low : 저가
+close : 종가
+volume : 거래량
+
+이렇게 나타내준다.
+
+get_ohlcv() 함수의 interval option으로 월/주/일/분 봉 중 하나를 선택할 수 있다. 따로 option을 넣어주지 않으면 default값으로 일봉이 나온다고 한다. *count* option은 가져오려는 데이터의 개수를 지저하는 데 사용한다. 최근 5일 동안의 데이터만 조회하고자 한다면,
+
+```python
+df = pyupbit.get_ohlcv("KRW-BTC", count=5)
+print(df)
+```
+
+이렇게 해주면된다. 그리고 기존에 pandas를 써본 사람이라면 .tail()이나 .head() 같은 기능도 정상적으로 동작하는 것을 알 수 있다.
+
+## 호가 조회
+매수호가(bid)와 매도호가(ask) 조회는 get_orderbook() 함수를 사용하면 된다.
+
+```python
+orderbook = pyupbit.get_orderbook("KRW-BTC")
+bids_asks = orderbook['orderbook_units']
+
+for bid_ask in bids_asks:
+    print(bid_ask)
+```
+
+를 해보면 10개의 호가 정보가 담긴 리스트 객체를 얻어올 수 있다. 아직은 어떤 알고리즘을 어떻게 짤지 몰라서 일단은 알아두기로 하자.
+
+불러와지는 데이터중 ask_price는 매도 호가이고 bid_price는 매수 호가이다. ask_size와 bid_size는 매도 호가 수량과 매수 호가 수량이다.
+
+## 잔고 조회
+여기서 부터는 아까 발급받은 api key를 사용해야 하기 때문에 허용된 ip가 꼭 필요한 상황이다.
+
+다음 게시물에는 서버를 하나 올려서 허용된 IP로 한번 접근을 해보고자 한다. 그러면서 알고리즘 어떻게 짤지 골머리좀 아파봐야지..
+
+오늘은 여기까지 끗!
