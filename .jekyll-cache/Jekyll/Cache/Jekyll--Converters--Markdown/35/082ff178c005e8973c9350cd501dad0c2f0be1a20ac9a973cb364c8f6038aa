@@ -1,0 +1,37 @@
+I"�
+<h2 id="잔고-조회">잔고 조회</h2>
+<p>각자 발급받은 api key를 활용하여 잔고 조회를 해보자. 허용된 ip에 꼭 자신의 네트워크 주소를 추가해준 뒤 해야 잔고조회가 가능하다.</p>
+
+<p><img src="/img/coin_auto2/coin_auto2_1.png" width="100%" /></p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">pyupbit</span>
+
+<span class="n">access_key</span> <span class="o">=</span> <span class="s">"t88RbbxB8NHNyqBUegeVqowGQOGEefeee3W2dGNU"</span>
+<span class="n">secret_key</span> <span class="o">=</span> <span class="s">"VCLoAhrxbvyrukYChbxfxD6O1ESegeckIgbqeiQf"</span>
+
+<span class="n">upbit</span> <span class="o">=</span> <span class="n">pyupbit</span><span class="p">.</span><span class="n">Upbit</span><span class="p">(</span><span class="n">access_key</span><span class="p">,</span> <span class="n">secret_key</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">upbit</span><span class="p">.</span><span class="n">get_balances</span><span class="p">())</span>
+</code></pre></div></div>
+<p><img src="/img/coin_auto2/coin_auto2_2.png" width="100%" /></p>
+
+<p>나는 아직 가진 것이 없기 때문에 list에 아무것도 뜨지 않는다^^ 잔고가 있는 상태라면, 아래의 그림처럼 나와야 한다.</p>
+
+<p><img src="/img/coin_auto2/coin_auto2_3.png" width="100%" /></p>
+
+<p>현재 작성하고 있는 글은 wiki docs를 보고 참고하여 작성중이며, 위의 key 값 역시 예시를 들어서 작성한 것이다.</p>
+
+<p>출력된 tuple형태의 값을 보면 tuple 객체의 0번에는 잔고 데이터가 있고, 1번에는 호출 제한 데이터가 있다고 한다. 잔고는 남아있는 자산의 종류별로 보여주는 것 같다.</p>
+
+<p>추후에 구매하게 된다면, 나의 잔고를 올려볼 수 있도록 하겠다. tuple의 1번은 API를 호출할 때 초당/분당 호출이 가능한 요청 수를 의미한다고 한다.</p>
+
+<p>아직까진 와닿지 않으니 그냥 이런 것들이 있나보다~ 하고 넘어가보자.</p>
+
+<h2 id="매수--매도">매수 / 매도</h2>
+<p>auto 투자의 꽃인 매수/매도 part이다.</p>
+
+<p>이 역시 Upbit 클래스의 인스턴스를 통해 호출할 수 있다. 지정가 매수를 위해서는 <strong>buy_limit_order()</strong> 함수를 사용하면 되고, 매도를 위해서는 <strong>sell_limit_order()</strong> 함수를 사용하면 된다.</p>
+
+<p>나는 아직 잔고가 없기 때문에 아래의 그림과 같이 나온다.</p>
+
+<p><img src="/img/coin_auto2/coin_auto2_4.png" width="100%" /></p>
+:ET

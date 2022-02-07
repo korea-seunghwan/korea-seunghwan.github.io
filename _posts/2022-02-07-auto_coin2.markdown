@@ -1,0 +1,76 @@
+---
+layout: post
+title: "코인 자동매매 프로그램 만들기2"
+subtitle: "story-2"
+date: 2022-02-07 18:00:00 +0900
+tag: coin
+background: '/img/coin_auto/coin_auto.png'
+---
+## 잔고 조회
+각자 발급받은 api key를 활용하여 잔고 조회를 해보자. 허용된 ip에 꼭 자신의 네트워크 주소를 추가해준 뒤 해야 잔고조회가 가능하다.
+
+<img src="/img/coin_auto2/coin_auto2_1.png" width="100%" />
+
+```python
+import pyupbit
+
+access_key = "t88RbbxB8NHNyqBUegeVqowGQOGEefeee3W2dGNU"
+secret_key = "VCLoAhrxbvyrukYChbxfxD6O1ESegeckIgbqeiQf"
+
+upbit = pyupbit.Upbit(access_key, secret_key)
+print(upbit.get_balances())
+```
+<img src="/img/coin_auto2/coin_auto2_2.png" width="100%" />
+
+나는 아직 가진 것이 없기 때문에 list에 아무것도 뜨지 않는다^^ 잔고가 있는 상태라면, 아래의 그림처럼 나와야 한다.
+
+<img src="/img/coin_auto2/coin_auto2_3.png" width="100%" />
+
+현재 작성하고 있는 글은 wiki docs를 보고 참고하여 작성중이며, 위의 key 값 역시 예시를 들어서 작성한 것이다.
+
+출력된 tuple형태의 값을 보면 tuple 객체의 0번에는 잔고 데이터가 있고, 1번에는 호출 제한 데이터가 있다고 한다. 잔고는 남아있는 자산의 종류별로 보여주는 것 같다.
+
+추후에 구매하게 된다면, 나의 잔고를 올려볼 수 있도록 하겠다. tuple의 1번은 API를 호출할 때 초당/분당 호출이 가능한 요청 수를 의미한다고 한다.
+
+아직까진 와닿지 않으니 그냥 이런 것들이 있나보다~ 하고 넘어가보자.
+
+## 매수 / 매도
+auto 투자의 꽃인 매수/매도 part이다.
+
+이 역시 Upbit 클래스의 인스턴스를 통해 호출할 수 있다. 지정가 매수를 위해서는 **buy_limit_order()** 함수를 사용하면 되고, 매도를 위해서는 **sell_limit_order()** 함수를 사용하면 된다.
+
+나는 아직 잔고가 없기 때문에 아래의 그림과 같이 나온다.
+
+<img src="/img/coin_auto2/coin_auto2_4.png" width="100%" />
+
+잔고가 존재하고 최소 주문 금액을 맞추어 주문을 넣으면, 
+
+<img src="/img/coin_auto2/coin_auto2_5.png" width="100%" />
+
+이렇게 return이 되고, 이때 uuid를 통해 주문 취소 혹은 수정을 할 수 있으니 참고할 수 있도록 하자.
+
+## 주문 취소
+앞서 매수 / 매도에서 주문을 호출하면 uuid 값이 return되는 것을 확인 했다. 이 값으로 **cancel_order()** 함수의 인자로 사용하면 해당 uuid를 갖는 주문 취소를 할 수 있다.
+
+```python
+import pyupbit
+
+access_key = "t88RbbxB8NHNyqBUegeVqowGQOGEefeee3W2dGNU"
+secret_key = "VCLoAhrxbvyrukYChbxfxD6O1ESegeckIgbqeiQf"
+
+upbit = pyupbit.Upbit(access_key, secret_key)
+ret = upbit.cancel_order('cc52be46-1000-4126-aee7-9bfafb867682')
+print(ret)
+```
+
+<img src="/img/coin_auto2/coin_auto2_6.png" width="100%" />
+
+내가 시도했을 경우 당연하게도, 주문을 찾을 수 없게 된다. 해당 주문이 존재할 경우에는 아래 그림처럼 return 된다고 한다.
+
+<img src="/img/coin_auto2/coin_auto2_7.png" width="100%" />
+
+여기까지가 우리가 자동매매를 구현하기 위한 기본적인 기능들을 쓰는 방법들이다.
+
+생각보다 유용한 library가 있어서 사실 그냥 함수들만 알고 있으면, 찾아서 쓰면 되는 듯 하다.
+
+앞으로 해야할 것은 알고리즘을 직접 만들어보려고 했는데 일단 automation 분야에서 대중적으로 쓰이는 알고리즘은 어떤 것들이 있는지 한번 알아봐야겠다.
