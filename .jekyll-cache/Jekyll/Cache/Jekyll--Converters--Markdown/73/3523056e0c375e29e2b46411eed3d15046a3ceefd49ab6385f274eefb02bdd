@@ -1,0 +1,132 @@
+I"�-<h2 id="nest-js-tutorial">nest js tutorial</h2>
+<p>nest js tutorial을 진행해보자.</p>
+
+<p>설치하는 방법에 대해서는 따로 언급하지 않겠다. 공식 documentation을 보면 더 자세히 알아볼 수 있다.</p>
+
+<p>먼저 project 생성!</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nest new ns-tutorial
+</code></pre></div></div>
+<p>하면 새로운 project가 생성이 된다!</p>
+
+<p>생성하게 되면 폴더 트리는 아래와 같은 사진처럼 나오게된다. 하나하나 뭘하는 파일인지 살펴보도록 하자.</p>
+
+<p><img src="/img/nest_1/1.png" /></p>
+
+<p>처음 받은 느낌은 spring을 해본사람이라면 알겠지만 뭔가 폴더 구성이나 파일 구성이 굉장히 유사한 모습을 볼 수 있다.</p>
+
+<p>controller는 url을 분기하면서 특정 url로 들어왔을 때 어떤일을 해야하는가를 알려주는 파일</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">{</span> <span class="nx">Controller</span><span class="p">,</span> <span class="nx">Get</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@nestjs/common</span><span class="dl">'</span><span class="p">;</span>
+<span class="k">import</span> <span class="p">{</span> <span class="nx">AppService</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">./app.service</span><span class="dl">'</span><span class="p">;</span>
+
+<span class="p">@</span><span class="nd">Controller</span><span class="p">()</span>
+<span class="k">export</span> <span class="kd">class</span> <span class="nx">AppController</span> <span class="p">{</span>
+  <span class="kd">constructor</span><span class="p">(</span><span class="k">private</span> <span class="k">readonly</span> <span class="nx">appService</span><span class="p">:</span> <span class="nx">AppService</span><span class="p">)</span> <span class="p">{}</span>
+
+  <span class="p">@</span><span class="nd">Get</span><span class="p">()</span>
+  <span class="nx">getHello</span><span class="p">():</span> <span class="kr">string</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">appService</span><span class="p">.</span><span class="nx">getHello</span><span class="p">();</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>service 파일은 어떤일을 해야하는지만 알려줬기 때문에 실제 어떤일을 수행하는 역할을 한다.</p>
+
+<p>service파일 안에 붙어있는 @Injectable은 app이 실행되고 있는 어느 파일에서라도 이 파일을 쓸수 있다는 표식이다. compose android에서도 사용되니 개념을 명확히 알면 좋다. 하지만 한번에 알기 어렵기 때문에 뭔지 몰라도 일단 사용하면서 어떨때 쓰이는지 자동적으로 알게 되는 것도 하나의 방법이다.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">{</span> <span class="nx">Injectable</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@nestjs/common</span><span class="dl">'</span><span class="p">;</span>
+
+<span class="p">@</span><span class="nd">Injectable</span><span class="p">()</span>
+<span class="k">export</span> <span class="kd">class</span> <span class="nx">AppService</span> <span class="p">{</span>
+  <span class="nx">getHello</span><span class="p">():</span> <span class="kr">string</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="dl">'</span><span class="s1">Hello World!</span><span class="dl">'</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>module은 controller와 service를 관장하는 놈으로 실제 해야할일을 알려주는 놈과 실제 행하는 놈을 다루는 곳이므로 보스라고 볼 수 있다.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">{</span> <span class="nx">Module</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@nestjs/common</span><span class="dl">'</span><span class="p">;</span>
+<span class="k">import</span> <span class="p">{</span> <span class="nx">AppController</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">./app.controller</span><span class="dl">'</span><span class="p">;</span>
+<span class="k">import</span> <span class="p">{</span> <span class="nx">AppService</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">./app.service</span><span class="dl">'</span><span class="p">;</span>
+
+<span class="p">@</span><span class="nd">Module</span><span class="p">({</span>
+  <span class="na">imports</span><span class="p">:</span> <span class="p">[],</span>
+  <span class="na">controllers</span><span class="p">:</span> <span class="p">[</span><span class="nx">AppController</span><span class="p">],</span>
+  <span class="na">providers</span><span class="p">:</span> <span class="p">[</span><span class="nx">AppService</span><span class="p">],</span>
+<span class="p">})</span>
+<span class="k">export</span> <span class="kd">class</span> <span class="nx">AppModule</span> <span class="p">{}</span>
+
+</code></pre></div></div>
+
+<p>전체적인 구조는 spring과 비슷하지만 각자 개별에 대한 폴더 구저는 python의 django와 유사하다는 느낌이 들었다.</p>
+
+<p>app module은 전체를 관장하는 module이고 이제 우리가 url별로 기능을 구현할 때 하나씩 app module에 추가해서 전체 app을 관장하는 app module 안에서 개별적인 기능을 관장하는 각각의 module을 추가해서 다룰 것으로 보인다.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>npm run start::dev
+</code></pre></div></div>
+<p>명령어로 실제 프로젝트를 동작시키고 http://localhost:3000으로 접속해보자.</p>
+
+<p>그럼 흰 화면에 Hello World! 만 찍혀있는 모습을 볼 수 있다.</p>
+
+<p>우리가 기대한 것은 json형태로 멋지게 나와야하는데 왜 이럴까?</p>
+
+<p>먼저 controller를 보면,</p>
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">@</span><span class="nd">Controller</span><span class="p">()</span>
+<span class="k">export</span> <span class="kd">class</span> <span class="nx">AppController</span> <span class="p">{</span>
+  <span class="kd">constructor</span><span class="p">(</span><span class="k">private</span> <span class="k">readonly</span> <span class="nx">appService</span><span class="p">:</span> <span class="nx">AppService</span><span class="p">)</span> <span class="p">{}</span>
+
+  <span class="p">@</span><span class="nd">Get</span><span class="p">()</span>
+  <span class="nx">getHello</span><span class="p">():</span> <span class="kr">string</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">appService</span><span class="p">.</span><span class="nx">getHello</span><span class="p">();</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+<p>아무것도 입력하지 않은 ‘/’ 경로에 대해 getHello()라는 함수가 받고 있고, 안에 보면 실제 수행해야하는일인 service객체의 getHello가 기다리고 있다. return type은 string임을 알 수 있다.</p>
+
+<p>여기서 일단 우리가 기대한 json 형태의 어떤 값이 나오지 않은 이유를 짐작할 수 있다.</p>
+
+<p>실제 수행하는 service의 getHello()를 찾아보자.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">@</span><span class="nd">Injectable</span><span class="p">()</span>
+<span class="k">export</span> <span class="kd">class</span> <span class="nx">AppService</span> <span class="p">{</span>
+  <span class="nx">getHello</span><span class="p">():</span> <span class="kr">string</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="dl">'</span><span class="s1">Hello World!</span><span class="dl">'</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>getHello()를 보면 우리가 보고있는 화면에 찍힌 글자를 return하고 있는 모습을 볼 수 있다.</p>
+
+<p>지금까지는 기본 파일들로 알아봤기 때문에 우리만의 app으로 구성해보자. 이런 개념은 python django에서 app을 붙이는 개념이랑 비슷하다.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nest generate module customers
+</code></pre></div></div>
+<p>라는 명령어로 python django에서 app을 추가하듯이 해주면된다.
+추가로</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>nest generate controller customers/controllers/customers
+</code></pre></div></div>
+<p>명령어로 controller도 자동으로 만들어줄 수 있다. (Module에 자동으로 추가된다.) 하지만 꼭 cli로 해야하는 것은 아니고 자신의 입맛에 맞게 파일들을 하나하나 추가해나가면 될 것 같다.</p>
+
+<p>customer의 controller를 추가해준 뒤 우리가 원하는 json 형태의 return을 돌려주는 형태로 조금 작성해보자.</p>
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">@</span><span class="nd">Controller</span><span class="p">(</span><span class="dl">'</span><span class="s1">customers</span><span class="dl">'</span><span class="p">)</span>
+<span class="k">export</span> <span class="kd">class</span> <span class="nx">CustomersController</span> <span class="p">{</span>
+  <span class="p">@</span><span class="nd">Get</span><span class="p">(</span><span class="dl">''</span><span class="p">)</span>
+  <span class="nx">getCustomer</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="p">{</span>
+      <span class="na">id</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+      <span class="na">email</span><span class="p">:</span> <span class="dl">'</span><span class="s1">senghan1992@gmail.com</span><span class="dl">'</span><span class="p">,</span>
+      <span class="na">createdAt</span><span class="p">:</span> <span class="k">new</span> <span class="nb">Date</span><span class="p">(),</span>
+    <span class="p">};</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>@Get() 안에 아무 string이 없으면 기본적으로 ‘/’ 경로로 들어오게 된다. 하지만 이 controller의 경우 prefix로 customers라는 경로가 붙어있기 때문에 http://localhost:3000/customers 라고 들어가야 결과가 보일 것이다.</p>
+
+<p><img src="/img/nest_1/2.png" width="100%" />
+<!-- <img src="/img/coin_auto2/coin_auto2_2.png" width="100%" /> --></p>
+
+<p>service 파일은 controller파일과 repository파일이 소통하는 창구 역할을 해준다. 즉 실제로 로직이 이루어지는 곳으로 생각하면 될 것 같다.</p>
+:ET

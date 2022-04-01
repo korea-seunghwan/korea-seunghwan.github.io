@@ -20,7 +20,7 @@ nest new ns-tutorial
 
 생성하게 되면 폴더 트리는 아래와 같은 사진처럼 나오게된다. 하나하나 뭘하는 파일인지 살펴보도록 하자.
 
-<img src="/img/nest#1/1.png" width="100%" />
+<img src="/img/nest_1/1.png" />
 
 처음 받은 느낌은 spring을 해본사람이라면 알겠지만 뭔가 폴더 구성이나 파일 구성이 굉장히 유사한 모습을 볼 수 있다.
 
@@ -143,7 +143,7 @@ export class CustomersController {
 ```
 @Get() 안에 아무 string이 없으면 기본적으로 '/' 경로로 들어오게 된다. 하지만 이 controller의 경우 prefix로 customers라는 경로가 붙어있기 때문에 http://localhost:3000/customers 라고 들어가야 결과가 보일 것이다.
 
-<img src="/img/nest#1/2.png" width="100%" />
+<img src="/img/nest_1/2.png" width="100%" />
 <!-- <img src="/img/coin_auto2/coin_auto2_2.png" width="100%" /> -->
 
 service 파일은 controller파일과 repository파일이 소통하는 창구 역할을 해준다. 즉 실제로 로직이 이루어지는 곳으로 생각하면 될 것 같다.

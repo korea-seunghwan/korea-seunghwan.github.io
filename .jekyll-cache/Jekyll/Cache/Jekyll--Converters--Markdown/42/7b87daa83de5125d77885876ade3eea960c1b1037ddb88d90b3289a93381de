@@ -1,0 +1,3 @@
+I"I<h2 id="request-parameter를-다뤄보자">Request parameter를 다뤄보자</h2>
+<p>api를 구성하는 동안에 우리는 base_url/search/1 형태의 id값으로 특정 정보를 찾는 경우가 있다. 이러한 경우 어떻게 url을 구성하는지, 어떻게 들어온 값을 사용하는지 알아보도록 하자.</p>
+:ET
