@@ -176,3 +176,167 @@ export class CreateCustomerDto {
 
 ```
 위의 코드를 보면 address라는 CreateAddressDto type의 데이터를 받고 있다. 위의 @IsNotEmptyObject()는 실제 들어온 body에 저 형태의 데이터가 들어있는지 묻는 것이고, @ValidateNested() 및 @Type(() => CreateAddressDto) 는 들어온 data의 transfer를 통해 실제 들어온 데이터를 CreateAddressDto의 validation에 맞춰서 validation을 진행하게 된다.
+
+## Filtering Passwords
+user의 password를 filtering하는 기능을 구현해보자.
+
+일단 user에 관련된 기능을 작성할 것이기 때문에 user에 관련한 controller, service, module 등을 작성해준다.
+
+```
+nest g module users
+
+nest g controller users/controllers/users
+
+nest g service users/services/users
+```
+
+User에 대한 data형식을 만들어준다. types->User.ts 생성
+
+```typescript
+export interface User {
+    username: string;
+    password: string;
+}
+```
+
+### service 구현
+```typescript
+import { Injectable } from '@nestjs/common';
+import { User } from 'src/users/types/User';
+
+@Injectable()
+export class UsersService {
+  private users: User[] = [
+    {
+      username: 'test1',
+      password: 'test1',
+    },
+    {
+      username: 'test2',
+      password: 'test2',
+    },
+    {
+      username: 'test3',
+      password: 'test3',
+    },
+    {
+      username: 'test4',
+      password: 'test4',
+    },
+  ];
+
+  getUsers() {
+    return this.users;
+  }
+
+  getUserByUserName(name: string) {
+    return this.users.find((u) => u.username === name);
+  }
+}
+```
+
+아직 데이터를 DB에서 불러오는 것이 아니기 때문에 일단 임시로 users array를 만들어 사용한다.
+
+userModule에서는 기존에 provider로 service파일을 넣어주는 것과 다르게 넣어줘본다.
+
+```typescript
+import { Module } from '@nestjs/common';
+import { UsersController } from './controllers/users/users.controller';
+import { UsersService } from './services/users/users.service';
+
+@Module({
+  controllers: [UsersController],
+  providers: [{
+    provide: "USER_SERVICE",
+    useClass: UsersService,
+  }]
+})
+export class UsersModule {}
+```
+
+위의 code에서 provide 명으로 UsersService를 보내주고 있기 때문에 controller에서 @Inject annotation으로 "USER_SERVICE"로 가져올 수 있다.
+
+```typescript
+@Controller('users')
+export class UsersController {
+  constructor(
+    @Inject('USER_SERVICE') private readonly userService: UsersService,
+  ) {}
+
+  @Get('')
+  getUsers() {}
+}
+```
+하지만 user 정보중 password는 보이면 안되기 때문에 api를 보내줄 때 제외해야 할 필요가 있다.
+
+@Exclude() annotation을 사용해서 내보낼 때 제외해야 하는 부분을 표시해줄 수 있고, class-transformer library의 plainToInstance() 함수를 통해서 type 변환을 해줄 수 있다.
+
+```typescript
+import { Exclude } from "class-transformer";
+
+export interface User {
+    username: string;
+    password: string;
+}
+
+export class SerializedUser {
+    username: string;
+
+    @Exclude()
+    password: string;
+}
+```
+
+``` typescript
+getUsers() {
+    return this.users.map((user) => plainToInstance(SerializedUser, user));
+  }
+```
+
+이렇게 기존의 user를 plainToInstance()를 통해서 SerializedUser 형태로 바꿔준다면 return 해줄 때 @Exclude가 붙은 password는 보이지 않게 나가게 된다.
+
+### username을 받아서 특정한 user의 정보에 대해서 password를 exclude시킨 뒤 내보내기
+
+```typescript
+
+types/index.ts
+
+import { Exclude } from "class-transformer";
+
+export interface User {
+    username: string;
+    password: string;
+}
+
+export class SerializedUser {
+    username: string;
+
+    @Exclude()
+    password: string;
+
+    constructor(partial: Partial<SerializedUser>) {
+        Object.assign(this, partial);
+    }
+    
+}
+
+```
+
+```typescript
+
+UserController.ts
+
+@UseInterceptors(ClassSerializerInterceptor)
+  @Get('/:username')
+  getUserByUserName(@Param('username') username: string) {
+    const user = this.userService.getUserByUserName(username);
+    if (user) return new SerializedUser(user);
+    else throw new HttpException('User not found', HttpStatus.BAD_REQUEST);
+  }
+
+```
+
+SerializedUser를 보면 constructor를 추가해서 partial을 넣어줬다. 사실 이게 무슨 의미를 하는지는 잘 모르곘으나, controller에서 UseInterceptors(ClassSerializerInterceptor)를 통해 저 기능을 깨우고
+return 해주는 데이터에 new SerializedUser(user)로 정보를 교체해주면 password를 제외한 나머지 정보가 나가게 된다.
+
+개발하는 사람의 취향인거 같다. 기존의 방법처럼 service에서 find한 user에 대해 plainToInstance를 통해서 바꿔주는 사람도 있을 수 있고, 지금처럼 controller에서 바꿔주는 사람도 있을 수 있다. 정답이라기 보다는 자기에게 맞는 방식으로 하면 될 것 같다.
