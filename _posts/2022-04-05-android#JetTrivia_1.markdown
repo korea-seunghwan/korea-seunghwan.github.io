@@ -174,3 +174,51 @@ class QuestionViewModel @Inject constructor(private val repository: QuestionRepo
 }
 ```
 위 코드를 보면 init에서 getAllQuestions() 함수를 호출함으로써 ViewModel class가 생성될 때 바로 수행하게 만든것을 볼 수 있다.
+
+## MainActivity 구성
+
+이제 실제로 어떻게 돌아가는지 MainActivity.kt 파일을 꾸며보자.
+
+```kotlin
+@AndroidEntryPoint
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            JetTriviaTheme {
+                // A surface container using the 'background' color from the theme
+                Surface(
+                    color = MaterialTheme.colors.background
+                ) {
+                    TriviaHome()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TriviaHome(viewModel: QuestionViewModel = hiltViewModel()) {
+    Questions(viewModel)
+}
+
+@Composable
+fun Questions(viewModel: QuestionViewModel) {
+    val questions = viewModel.data.value.data?.toMutableList()
+    Log.d("SIZE", "Questions: ${questions?.size}")
+}
+```
+
+위의 코드를 보면 TriviaHome()에 parameter로 hiltViewModel()을 넣어줬는데, 이거는 원리를 솔직히 잘 모르겠다. 하지만 이렇게 넣어줌으로써, 안에있는 Questions에서 viewModel을 꺼내서 사용할 수 있다.
+
+Log를 찍어보면, 
+<img src="/img/android_JetTrivia#1/2.png" />
+
+이렇게 반환되는 data의 length를 알 수 있다. 이는 이 앞에서 작업했던 내용들이 background에서 돌아가며 데이터를 가지고 온 것이므로 우리가 보는 UI에서는 찾아볼 수 없다.
+
+## Creating the UI
+이제 우리가 불러온 데이터들을 실제 사용자가 볼 수 있게 UI로 구성해보자.
+
+UI 구성 및 기능 구현은 코드가 너무 복잡하고 길어서 아래 링크에 걸어두도록 하겠다.
+
+<a href="https://github.com/korea-seunghwan/JetTrivia_Android_Compose/tree/master">git code link</a>
