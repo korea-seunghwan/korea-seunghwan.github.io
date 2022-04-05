@@ -1,0 +1,205 @@
+I"�T<h2 id="시작">시작</h2>
+<p>flutter와 swiftui를 공부하면서 android에서도 component기반으로 앱을 작성하는 jetpack compose android가 출시한다는 것을 알고 있었다.</p>
+
+<p>사용법이 굉장히 비슷하다고 생각해서, 언젠간 공부해야지 하고 덮어뒀지만 이제 어느정도 안정성도 보장된다고 하니 시작해보려한다.</p>
+
+<p>두세개 정도의 toy project를 진행해보았고, 이제 실제로 서비스에 필요한 기술들이 농축되어있는 toy project를 만들어 올려보려고 한다.</p>
+
+<p>그럼 시작!!</p>
+
+<h2 id="sync-gradle-sync">sync gradle sync</h2>
+<p>이부분이 좀 나는 가장 어려운것 같다. 사람들이 올려놓은 버전이랑 내가 지금 킨 버전이랑 다르면 좀 다른 부분들이 존재하기 때문이다. 일단은 초기 세팅 해줄 것들이 좀 많아서 이미지로 올린다.</p>
+
+<p><img src="/img/android_JetTrivia_1/1.png" /></p>
+
+<p>여러가지 설치해줘야 하는 내용들이 좀 있다. 빨간색 테두리로 둘러쌓인 부분이 내가 따로 작성한 부분이고, 나머지는 기본 gradle파일 그대로이다. 파일을 작성하고 나면 상단에 sync 버튼이 나오고 그 버튼 클릭을 통해서 dependencies들을 sync해주면 된다.</p>
+
+<h3 id="kotlin-class-from-json">Kotlin class from JSON</h3>
+<p>이거는 꿀팁인데 우리가 json 형태로 되어있는 파일을 분석해서 class로 만들기 귀찮다면 plugin을 설치해서 사용하면 한번에 만들어주는 plugin이다. 우리가 주고받아야하는 데이터 형식에 맞춰 파일을 자동으로 생성해준다.</p>
+
+<h2 id="retrofit-사용">Retrofit 사용</h2>
+<p>A type-safe HTTP client for Android and Java.</p>
+
+<p>HTTP 통신을 쉽고 빠르게 해줄 수 있는 library이다. 예전에 Java로 android를 공부했을 때도, 이 library를 사용했던 경험이 있다.</p>
+
+<p>사용하기 위해서는 gradle에 dependencies를 적어줘야한다. 아래와 같이 작성하고 sync해주자.</p>
+<div class="language-gradle highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Retrofit</span>
+<span class="n">implementation</span> <span class="s1">'com.squareup.retrofit2:retrofit:2.9.0'</span>
+<span class="c1">// GSON converter</span>
+<span class="n">implementation</span> <span class="s1">'com.squareup.retrofit2:converter-gson:2.9.0'</span>
+</code></pre></div></div>
+
+<h2 id="hiltapplication-파일-생성">HiltApplication 파일 생성</h2>
+<p>폴더트리의 최상위 구조에 @HiltApplication annotation을 단 파일을 생성해준다.</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">@HiltAndroidApp</span>
+<span class="kd">class</span> <span class="nc">TriviaApplication</span><span class="p">:</span> <span class="nc">Application</span><span class="p">()</span> <span class="p">{</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>AndroidManifest 파일에 android:name 적어주기 =&gt; android:name=”.TriviaApplication”</p>
+
+<p>즉 방금 만든 파일이 앱의 시작점이 된다는 의미인 것 같다. 이것은 나의 생각이므로 정답은아니다.</p>
+
+<h2 id="di-package안에-appmodule-파일-생성">di package안에 AppModule 파일 생성</h2>
+<p>nestjs에서의 module 파일과 역할이 같은 것 같다. 여기파일에서 모든 provider를 더해주게 된다.</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">@Module</span>
+<span class="nd">@InstallIn</span><span class="p">(</span><span class="nc">SingletonComponent</span><span class="o">::</span><span class="k">class</span><span class="p">)</span>
+<span class="kd">object</span> <span class="nc">AppModule</span> <span class="p">{</span>
+
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="util-폴더에-constants-파일-생성">util 폴더에 Constants 파일 생성</h2>
+<p>base url을 설정해주고 후에 retrofit으로 인터넷 연결을 할 때 base url을 여기서 꺼내쓸 요량</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">object</span> <span class="nc">Constants</span> <span class="p">{</span>
+    <span class="k">const</span> <span class="kd">val</span> <span class="py">BASE_URL</span> <span class="p">=</span> <span class="s">"https://raw.githubusercontent.com/itmmckernan/triviaJSON/master/"</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="network-폴더에-questionapi-파일-생성">network 폴더에 QuestionApi 파일 생성</h2>
+<p>singleton으로 만들어 앱전체에서 불러서 사용할 수 있게 만든다. 기능 구현을 위한 interface를 만들어준다.</p>
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">@Singleton</span>
+<span class="kd">interface</span> <span class="nc">QuestionApi</span> <span class="p">{</span>
+    <span class="nd">@GET</span><span class="p">(</span><span class="s">"word.json"</span><span class="p">)</span>
+    <span class="k">suspend</span> <span class="k">fun</span> <span class="nf">getAllQuestions</span><span class="p">():</span> <span class="nc">Question</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>interface이기 때문에 실제 기능은 구현하지 않고 어떤기능을 구현할 것인지에 대한 스케치 정도를 한다고 보면된다.</p>
+
+<h2 id="appmodule파일에-provider-설정">AppModule파일에 provider 설정</h2>
+<p>앞에서 AppModule은 nestjs에서의 module 역할이라고 설명을 했다. nestjs에서는 간단하게 provider를 설정할 수 있었지만 android에서는 조금은 더 복잡한 방법으로 설정을 해줘야 한다.</p>
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="nd">@Module</span>
+<span class="nd">@InstallIn</span><span class="p">(</span><span class="nc">SingletonComponent</span><span class="o">::</span><span class="k">class</span><span class="p">)</span>
+<span class="kd">object</span> <span class="nc">AppModule</span> <span class="p">{</span>
+    <span class="nd">@Singleton</span>
+    <span class="nd">@Provides</span>
+    <span class="k">fun</span> <span class="nf">provideQuestionApi</span><span class="p">():</span> <span class="nc">QuestionApi</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nc">Retrofit</span><span class="p">.</span><span class="nc">Builder</span><span class="p">()</span>
+            <span class="p">.</span><span class="nf">baseUrl</span><span class="p">(</span><span class="nc">Constants</span><span class="p">.</span><span class="nc">BASE_URL</span><span class="p">)</span>
+            <span class="p">.</span><span class="nf">addConverterFactory</span><span class="p">(</span><span class="nc">GsonConverterFactory</span><span class="p">.</span><span class="nf">create</span><span class="p">())</span>
+            <span class="p">.</span><span class="nf">build</span><span class="p">()</span>
+            <span class="p">.</span><span class="nf">create</span><span class="p">(</span><span class="nc">QuestionApi</span><span class="o">::</span><span class="k">class</span><span class="p">.</span><span class="n">java</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>설정해준 내용을 보면 QuestionApi에 대해서 provider를 설정해주고 있고 Retrofit을 Builder를 통해 구현해놓았다. 구현되는 공통되는 부분을 한번에 구현해서 AppModule에 붙여줬다고 생각하면 될 것 같다. 저기서 BASE_URL은 앞선 Constant파일에서 생성한 url이고 실제 QuestionApi에 @GET(“word.json”) url을 붙여 하나의 url로 사용된다.</p>
+
+<h2 id="repository-생성">Repository 생성</h2>
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">class</span> <span class="nc">QuestionRepository</span> <span class="nd">@Inject</span> <span class="k">constructor</span><span class="p">(</span><span class="k">private</span> <span class="kd">val</span> <span class="py">api</span><span class="p">:</span> <span class="nc">QuestionApi</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">private</span> <span class="kd">val</span> <span class="py">dataOrException</span> <span class="p">=</span> <span class="nc">DataOrException</span><span class="p">&lt;</span><span class="nc">ArrayList</span><span class="p">&lt;</span><span class="nc">QuestionItem</span><span class="p">&gt;,</span> <span class="nc">Boolean</span><span class="p">,</span> <span class="nc">Exception</span><span class="p">&gt;()</span>
+
+    <span class="k">suspend</span> <span class="k">fun</span> <span class="nf">getAllQuestions</span><span class="p">():</span> <span class="nc">DataOrException</span><span class="p">&lt;</span><span class="nc">ArrayList</span><span class="p">&lt;</span><span class="nc">QuestionItem</span><span class="p">&gt;,</span> <span class="nc">Boolean</span><span class="p">,</span> <span class="nc">Exception</span><span class="p">&gt;</span> <span class="p">{</span>
+        <span class="k">try</span> <span class="p">{</span>
+            <span class="n">dataOrException</span><span class="p">.</span><span class="n">loading</span> <span class="p">=</span> <span class="k">true</span>
+            <span class="n">dataOrException</span><span class="p">.</span><span class="n">data</span> <span class="p">=</span> <span class="n">api</span><span class="p">.</span><span class="nf">getAllQuestions</span><span class="p">()</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">dataOrException</span><span class="p">.</span><span class="n">data</span><span class="p">.</span><span class="nf">toString</span><span class="p">().</span><span class="nf">isNotEmpty</span><span class="p">())</span> <span class="n">dataOrException</span><span class="p">.</span><span class="n">loading</span> <span class="p">=</span> <span class="k">false</span>
+        <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="n">exception</span><span class="p">:</span> <span class="nc">Exception</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">dataOrException</span><span class="p">.</span><span class="n">e</span> <span class="p">=</span> <span class="n">exception</span>
+            <span class="nc">Log</span><span class="p">.</span><span class="nf">d</span><span class="p">(</span><span class="s">"Exc"</span><span class="p">,</span> <span class="s">"getAllQuestions: ${dataOrException.e!!.localizedMessage}"</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">dataOrException</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>실제 service를 구현하는 부분이라고 보면된다. 이때 DataOrException이라는 데이터 타입이 보이는데, 이를 살펴보면,</p>
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">data class</span> <span class="nc">DataOrException</span><span class="p">&lt;</span><span class="nc">T</span><span class="p">,</span> <span class="nc">Boolean</span><span class="p">,</span> <span class="nc">E</span> <span class="p">:</span> <span class="nc">Exception</span><span class="p">&gt;(</span>
+    <span class="kd">var</span> <span class="py">data</span><span class="p">:</span> <span class="nc">T</span><span class="p">?</span> <span class="p">=</span> <span class="k">null</span><span class="p">,</span>
+    <span class="kd">var</span> <span class="py">loading</span><span class="p">:</span> <span class="nc">Boolean</span><span class="p">?</span> <span class="p">=</span> <span class="k">null</span><span class="p">,</span>
+    <span class="kd">var</span> <span class="py">e</span><span class="p">:</span> <span class="nc">E</span><span class="p">?</span> <span class="p">=</span> <span class="k">null</span>
+<span class="p">)</span>
+</code></pre></div></div>
+<p>이렇게 되어있다. 이는 api data를 받아올때, data, loading여부, exception을 한번에 받아오기 편하게 class를 만들어서 사용하는 방법이다.
+SwiftUI를 공부할 때 network 연결을 위해 나도 만들어 사용해본적이 있다. 항상 똑같은 형식으로 api가 날라오기 때문에 data부분은 data의 구성이 달라질수가 있으므로 Generic 타입으로 설정해주고 나머지는 똑같기 때문에 같이 사용한다.</p>
+
+<p>loading 여부까지 만들어서 사용하는 방법은 생각 못했었던 것 같다. 아주 편리하게 사용가능할 것 같다.</p>
+
+<p>QuestionRepository를 보면 @Inject constructor(private val api: QuestionApi) 를 통해서 Singleton으로 설정되어있는 interface QuestionApi를 가지고 와서 사용한다.</p>
+
+<h2 id="appmodule에-repository-추가">AppModule에 repository 추가</h2>
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">@Singleton</span>
+<span class="nd">@Provides</span>
+<span class="k">fun</span> <span class="nf">provideQuestionRepository</span><span class="p">(</span><span class="n">api</span><span class="p">:</span> <span class="nc">QuestionApi</span><span class="p">)</span> <span class="p">=</span> <span class="nc">QuestionRepository</span><span class="p">(</span><span class="n">api</span><span class="p">)</span>
+</code></pre></div></div>
+<p>AppModule에 repository를 등록해준다. api를 parameter로 넣어서 module에 QuestionApi를 등록해준다. 이 일련의 과정들은 background에서 일어나며 우리는 특별히 저 function들을 호출하지 않아도 알아서 호출되게 된다.</p>
+
+<h2 id="viewmodel-class-만들기">ViewModel class 만들기</h2>
+<p>실제로 기능을 사용하는 부분이다. nestjs로 따지면 controller같은 느낌 모든 기능을 관장하는 곳이라고 생각하면된다.</p>
+
+<p>실제 UI와 소통을 하는 부분이다.</p>
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">@HiltViewModel</span>
+<span class="kd">class</span> <span class="nc">QuestionViewModel</span> <span class="nd">@Inject</span> <span class="k">constructor</span><span class="p">(</span><span class="k">private</span> <span class="kd">val</span> <span class="py">repository</span><span class="p">:</span> <span class="nc">QuestionRepository</span><span class="p">)</span> <span class="p">:</span>
+    <span class="nc">ViewModel</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kd">val</span> <span class="py">data</span><span class="p">:</span> <span class="nc">MutableState</span><span class="p">&lt;</span><span class="nc">DataOrException</span><span class="p">&lt;</span><span class="nc">ArrayList</span><span class="p">&lt;</span><span class="nc">QuestionItem</span><span class="p">&gt;,</span> <span class="nc">Boolean</span><span class="p">,</span> <span class="nc">Exception</span><span class="p">&gt;&gt;</span> <span class="p">=</span>
+        <span class="nf">mutableStateOf</span><span class="p">(</span><span class="nc">DataOrException</span><span class="p">(</span><span class="k">null</span><span class="p">,</span> <span class="k">true</span><span class="p">,</span> <span class="nc">Exception</span><span class="p">(</span><span class="s">""</span><span class="p">)))</span>
+
+    <span class="nf">init</span> <span class="p">{</span>
+        <span class="nf">getAllQuestions</span><span class="p">()</span>
+    <span class="p">}</span>
+
+    <span class="k">private</span> <span class="k">fun</span> <span class="nf">getAllQuestions</span><span class="p">()</span> <span class="p">{</span>
+        <span class="n">viewModelScope</span><span class="p">.</span><span class="nf">launch</span> <span class="p">{</span>
+            <span class="n">data</span><span class="p">.</span><span class="n">value</span><span class="p">.</span><span class="n">loading</span> <span class="p">=</span> <span class="k">true</span>
+            <span class="n">data</span><span class="p">.</span><span class="n">value</span> <span class="p">=</span> <span class="n">repository</span><span class="p">.</span><span class="nf">getAllQuestions</span><span class="p">()</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">data</span><span class="p">.</span><span class="n">value</span><span class="p">.</span><span class="n">data</span><span class="p">.</span><span class="nf">toString</span><span class="p">().</span><span class="nf">isNotEmpty</span><span class="p">())</span> <span class="p">{</span>
+                <span class="n">data</span><span class="p">.</span><span class="n">value</span><span class="p">.</span><span class="n">loading</span> <span class="p">=</span> <span class="k">false</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>위 코드를 보면 init에서 getAllQuestions() 함수를 호출함으로써 ViewModel class가 생성될 때 바로 수행하게 만든것을 볼 수 있다.</p>
+
+<h2 id="mainactivity-구성">MainActivity 구성</h2>
+
+<p>이제 실제로 어떻게 돌아가는지 MainActivity.kt 파일을 꾸며보자.</p>
+
+<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">@AndroidEntryPoint</span>
+<span class="kd">class</span> <span class="nc">MainActivity</span> <span class="p">:</span> <span class="nc">ComponentActivity</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">onCreate</span><span class="p">(</span><span class="n">savedInstanceState</span><span class="p">:</span> <span class="nc">Bundle</span><span class="p">?)</span> <span class="p">{</span>
+        <span class="k">super</span><span class="p">.</span><span class="nf">onCreate</span><span class="p">(</span><span class="n">savedInstanceState</span><span class="p">)</span>
+        <span class="nf">setContent</span> <span class="p">{</span>
+            <span class="nc">JetTriviaTheme</span> <span class="p">{</span>
+                <span class="c1">// A surface container using the 'background' color from the theme</span>
+                <span class="nc">Surface</span><span class="p">(</span>
+                    <span class="n">color</span> <span class="p">=</span> <span class="nc">MaterialTheme</span><span class="p">.</span><span class="n">colors</span><span class="p">.</span><span class="n">background</span>
+                <span class="p">)</span> <span class="p">{</span>
+                    <span class="nc">TriviaHome</span><span class="p">()</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="nd">@Composable</span>
+<span class="k">fun</span> <span class="nf">TriviaHome</span><span class="p">(</span><span class="n">viewModel</span><span class="p">:</span> <span class="nc">QuestionViewModel</span> <span class="p">=</span> <span class="nf">hiltViewModel</span><span class="p">())</span> <span class="p">{</span>
+    <span class="nc">Questions</span><span class="p">(</span><span class="n">viewModel</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="nd">@Composable</span>
+<span class="k">fun</span> <span class="nf">Questions</span><span class="p">(</span><span class="n">viewModel</span><span class="p">:</span> <span class="nc">QuestionViewModel</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">val</span> <span class="py">questions</span> <span class="p">=</span> <span class="n">viewModel</span><span class="p">.</span><span class="n">data</span><span class="p">.</span><span class="n">value</span><span class="p">.</span><span class="n">data</span><span class="o">?.</span><span class="nf">toMutableList</span><span class="p">()</span>
+    <span class="nc">Log</span><span class="p">.</span><span class="nf">d</span><span class="p">(</span><span class="s">"SIZE"</span><span class="p">,</span> <span class="s">"Questions: ${questions?.size}"</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>위의 코드를 보면 TriviaHome()에 parameter로 hiltViewModel()을 넣어줬는데, 이거는 원리를 솔직히 잘 모르겠다. 하지만 이렇게 넣어줌으로써, 안에있는 Questions에서 viewModel을 꺼내서 사용할 수 있다.</p>
+
+<p>Log를 찍어보면, 
+<img src="/img/android_JetTrivia_1/2.png" /></p>
+
+<p>이렇게 반환되는 data의 length를 알 수 있다. 이는 이 앞에서 작업했던 내용들이 background에서 돌아가며 데이터를 가지고 온 것이므로 우리가 보는 UI에서는 찾아볼 수 없다.</p>
+
+<h2 id="creating-the-ui">Creating the UI</h2>
+<p>이제 우리가 불러온 데이터들을 실제 사용자가 볼 수 있게 UI로 구성해보자.</p>
+
+<p>UI 구성 및 기능 구현은 코드가 너무 복잡하고 길어서 아래 링크에 걸어두도록 하겠다.</p>
+
+<p><a href="https://github.com/korea-seunghwan/JetTrivia_Android_Compose/tree/master">git code link</a></p>
+:ET

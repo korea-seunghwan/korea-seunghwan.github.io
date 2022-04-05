@@ -19,7 +19,7 @@ flutter와 swiftui를 공부하면서 android에서도 component기반으로 앱
 ## sync gradle sync
 이부분이 좀 나는 가장 어려운것 같다. 사람들이 올려놓은 버전이랑 내가 지금 킨 버전이랑 다르면 좀 다른 부분들이 존재하기 때문이다. 일단은 초기 세팅 해줄 것들이 좀 많아서 이미지로 올린다.
 
-<img src="/img/android_JetTrivia#1/1.png" />
+<img src="/img/android_JetTrivia_1/1.png" />
 
 여러가지 설치해줘야 하는 내용들이 좀 있다. 빨간색 테두리로 둘러쌓인 부분이 내가 따로 작성한 부분이고, 나머지는 기본 gradle파일 그대로이다. 파일을 작성하고 나면 상단에 sync 버튼이 나오고 그 버튼 클릭을 통해서 dependencies들을 sync해주면 된다.
 
@@ -212,7 +212,7 @@ fun Questions(viewModel: QuestionViewModel) {
 위의 코드를 보면 TriviaHome()에 parameter로 hiltViewModel()을 넣어줬는데, 이거는 원리를 솔직히 잘 모르겠다. 하지만 이렇게 넣어줌으로써, 안에있는 Questions에서 viewModel을 꺼내서 사용할 수 있다.
 
 Log를 찍어보면, 
-<img src="/img/android_JetTrivia#1/2.png" />
+<img src="/img/android_JetTrivia_1/2.png" />
 
 이렇게 반환되는 data의 length를 알 수 있다. 이는 이 앞에서 작업했던 내용들이 background에서 돌아가며 데이터를 가지고 온 것이므로 우리가 보는 UI에서는 찾아볼 수 없다.
 
