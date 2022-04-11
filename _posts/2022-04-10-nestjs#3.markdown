@@ -1,0 +1,186 @@
+---
+layout: post
+title: "nest js tutorial #3"
+subtitle: "#3"
+date: 2022-04-10 00:00:00 +0900
+tag: nestjs
+background: "/img/bg-post.jpg"
+---
+
+## Middleware
+
+customers에 middleware 폴더 추가 및 validate-customer.middleware.ts 파일 생성
+
+middleware는 express를 다룰 때 써봐서 어떻게 돌아가는지 원리는 알고 있다. middleware는 쉽게 설명하면 해당 url로 들어와 service에 구현되어있는 로직을 수행하기 이전에 수행되는 로직이라고 생각하면 편하다.
+
+express에서는 비교적 middleware 사용이 쉽고 간단했는데, nestjs에서는 express보다는 조금 더 복잡하게 사용해야 한다.
+
+일단 생성한 validate-customer.middleware.ts파일을 보면,
+
+```typescript
+import { Injectable, NestMiddleware } from "@nestjs/common";
+import { NextFunction } from "express";
+
+@Injectable()
+export class ValidateCustomerMiddleware implements NestMiddleware {
+  use(req: Request, res: Response, next: NextFunction) {
+    console.log("Hello, world. Iam inside ValidateCustomerMiddleware!");
+    next();
+  }
+}
+```
+
+@Injectable() annotation을 붙여주었고, NestMiddleware라는 interface를 구현하는 방법으로 사용한다. 내부는 use()함수가 구현되어 있는데 구성을 보면,
+req, res 다 사용가능하고 여기서 next는 middleware를 거쳐 실제 url에서 수행되어야 하는 로직을 의미한다.
+이를 사용하기 위해서는 module 파일에 붙여주는 작업이 필요하다.
+
+```typescript
+import {
+  MiddlewareConsumer,
+  Module,
+  NestModule,
+  RequestMethod,
+} from "@nestjs/common";
+import { CustomersController } from "./controllers/customers/customers.controller";
+import { ValidateCustomerMiddleware } from "./middlewares/validate-customer.middleware";
+import { CustomersService } from "./services/customers/customers.service";
+
+@Module({
+  controllers: [CustomersController],
+  providers: [CustomersService],
+})
+export class CustomersModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(ValidateCustomerMiddleware).forRoutes({
+      path: "customers/search/:id",
+      method: RequestMethod.GET,
+    });
+  }
+}
+```
+
+module파일의 쓰임새가 여기서 도드라지게 나타난다 기존에는 그냥 service를 붙여주는 곳으로만 생각했는데 middleware도 여기서 붙여줄 수 있다.
+
+NestModule이라는 interface를 구현하고 있으며 configure 함수 내부에 apply 함수로 우리가 작성했던 ValidateCustomerMiddleware를 붙여주고 .forRoutes({})로 middleware를 설정해 줄 path도 설정이 가능하다.
+
+현재는 'customers/search/:id' 에다가만 middleware를 붙여주었고, 실제 postman으로 test해보면
+
+<img src="/img/nest_3/1.png" width="100%"/>
+
+<img src="/img/nest_3/2.png" />
+
+이렇게 결과가 나오는 것을 볼 수 있다. middleware를 들렸다 왔다는 증거로 저렇게 console에 log가 찍히게 되는 것이다.
+
+추후에 JWTToken을 통해서 로그인 확인을 할 때 middleware를 많이 사용하게 되는데 유용하게 사용할 수 있을 것 같다.
+
+```typescript
+@Module({
+  controllers: [CustomersController],
+  providers: [CustomersService],
+})
+export class CustomersModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    // consumer.apply(ValidateCustomerMiddleware).forRoutes(
+    //   {
+    //     path: 'customers/search/:id',
+    //     method: RequestMethod.GET,
+    //   },
+    //   {
+    //     path: 'customers/:id',
+    //     method: RequestMethod.GET,
+    //   },
+    // );
+    consumer.apply(ValidateCustomerMiddleware).forRoutes(CustomersController);
+  }
+}
+```
+
+이렇게 controller를 통째로 붙여주면 controller에 속하는 모든 route들에 middleware를 붙여줄 수 있다.
+
+exclude 함수를 사용해서 전체중에 제외시킬 수 있다. 예를 들면,
+
+```typescript
+import { Injectable, NestMiddleware } from "@nestjs/common";
+import { NextFunction, Request, Response } from "express";
+
+@Injectable()
+export class ValidateCustomerMiddleware implements NestMiddleware {
+  use(req: Request, res: Response, next: NextFunction) {
+    console.log("Hello, world. Iam inside ValidateCustomerMiddleware!");
+
+    const { authorization } = req.headers;
+    if (!authorization)
+      return res
+        .status(403)
+        .send({ error: "No Authentication Token Provided" });
+
+    next();
+  }
+}
+```
+
+처럼 header에서 authorization으로 jwtToken을 받고, token이 같이 넘어오지 않는다면, next() function으로 넘어가서 해당 url에 service 기능을 수행하는 것이 아니라, 바로 return해서 authentication이 제대로 되지 않았다고 알려준다.
+
+```typescript
+
+  if (authorization === "test") {
+    next();
+  } else {
+    return res
+      .status(403)
+      .send({ error: "Invalid Authentication Token Provided." });
+  }
+  
+```
+이런식으로 들어온 authorization을 검토해서 조건에 맞게 실행시킬 수 있다. 물론 실제 로그인 체크를 할 때는 위의 코드처럼 하지 않는다.
+
+새로운 middleware 파일 valid-customer-account.middleware.ts을 만들어보자.
+
+```typescript
+
+  import { Injectable, NestMiddleware } from '@nestjs/common';
+  import { NextFunction, Request, Response } from 'express';
+
+  @Injectable()
+  export class ValidateCustomerAccount implements NestMiddleware {
+    use(req: Request, res: Response, next: NextFunction) {
+      const { valid } = req.headers;
+      if (valid) {
+        next();
+      } else {
+        res.status(401).send({ error: 'Account is invalid' });
+      }
+    }
+  }
+
+```
+
+여러개의 middleware를 적용시켜 줄때는 module 파일에서 그냥 , 찍고 붙여주면 된다.
+
+```typescript
+
+  export class CustomersModule implements NestModule {
+    configure(consumer: MiddlewareConsumer) {
+      consumer
+        .apply(ValidateCustomerMiddleware, ValidateCustomerAccount)
+        .forRoutes(
+          {
+            path: 'customers/search/:id',
+            method: RequestMethod.GET,
+          },
+          {
+            path: 'customers/:id',
+            method: RequestMethod.GET,
+          },
+        );
+      // consumer.apply(ValidateCustomerMiddleware).forRoutes(CustomersController);
+    }
+  }
+
+```
+
+이렇게 되면 먼저 붙여준 ValidateCustomerMiddleware를 들리고 충족한다면 next() function을 통해 ValidateCustomerAccount로 들어가게 된다. ValidateCustomerAccount까지 통과해야만 해당 url의 service 기능까지 갈 수 있다.
+
+여기까지해서 Middleware장을 마치도록 하겠다.
+
+Middleware는 쉽게 생각해서 controller의 url에 공통적으로 먼저 체크해야되는 기능을 거쳐서 url로 접속할 수 있게 하는 filter정도로 생각하면 된다.

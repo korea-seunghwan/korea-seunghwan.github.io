@@ -1,0 +1,171 @@
+I"�G<h2 id="middleware">Middleware</h2>
+
+<p>customers에 middleware 폴더 추가 및 validate-customer.middleware.ts 파일 생성</p>
+
+<p>middleware는 express를 다룰 때 써봐서 어떻게 돌아가는지 원리는 알고 있다. middleware는 쉽게 설명하면 해당 url로 들어와 service에 구현되어있는 로직을 수행하기 이전에 수행되는 로직이라고 생각하면 편하다.</p>
+
+<p>express에서는 비교적 middleware 사용이 쉽고 간단했는데, nestjs에서는 express보다는 조금 더 복잡하게 사용해야 한다.</p>
+
+<p>일단 생성한 validate-customer.middleware.ts파일을 보면,</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">{</span> <span class="nx">Injectable</span><span class="p">,</span> <span class="nx">NestMiddleware</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">@nestjs/common</span><span class="dl">"</span><span class="p">;</span>
+<span class="k">import</span> <span class="p">{</span> <span class="nx">NextFunction</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">express</span><span class="dl">"</span><span class="p">;</span>
+
+<span class="p">@</span><span class="nd">Injectable</span><span class="p">()</span>
+<span class="k">export</span> <span class="kd">class</span> <span class="nx">ValidateCustomerMiddleware</span> <span class="k">implements</span> <span class="nx">NestMiddleware</span> <span class="p">{</span>
+  <span class="nx">use</span><span class="p">(</span><span class="nx">req</span><span class="p">:</span> <span class="nx">Request</span><span class="p">,</span> <span class="nx">res</span><span class="p">:</span> <span class="nx">Response</span><span class="p">,</span> <span class="nx">next</span><span class="p">:</span> <span class="nx">NextFunction</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">Hello, world. Iam inside ValidateCustomerMiddleware!</span><span class="dl">"</span><span class="p">);</span>
+    <span class="nx">next</span><span class="p">();</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>@Injectable() annotation을 붙여주었고, NestMiddleware라는 interface를 구현하는 방법으로 사용한다. 내부는 use()함수가 구현되어 있는데 구성을 보면,
+req, res 다 사용가능하고 여기서 next는 middleware를 거쳐 실제 url에서 수행되어야 하는 로직을 의미한다.
+이를 사용하기 위해서는 module 파일에 붙여주는 작업이 필요하다.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">{</span>
+  <span class="nx">MiddlewareConsumer</span><span class="p">,</span>
+  <span class="nx">Module</span><span class="p">,</span>
+  <span class="nx">NestModule</span><span class="p">,</span>
+  <span class="nx">RequestMethod</span><span class="p">,</span>
+<span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">@nestjs/common</span><span class="dl">"</span><span class="p">;</span>
+<span class="k">import</span> <span class="p">{</span> <span class="nx">CustomersController</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">./controllers/customers/customers.controller</span><span class="dl">"</span><span class="p">;</span>
+<span class="k">import</span> <span class="p">{</span> <span class="nx">ValidateCustomerMiddleware</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">./middlewares/validate-customer.middleware</span><span class="dl">"</span><span class="p">;</span>
+<span class="k">import</span> <span class="p">{</span> <span class="nx">CustomersService</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">./services/customers/customers.service</span><span class="dl">"</span><span class="p">;</span>
+
+<span class="p">@</span><span class="nd">Module</span><span class="p">({</span>
+  <span class="na">controllers</span><span class="p">:</span> <span class="p">[</span><span class="nx">CustomersController</span><span class="p">],</span>
+  <span class="na">providers</span><span class="p">:</span> <span class="p">[</span><span class="nx">CustomersService</span><span class="p">],</span>
+<span class="p">})</span>
+<span class="k">export</span> <span class="kd">class</span> <span class="nx">CustomersModule</span> <span class="k">implements</span> <span class="nx">NestModule</span> <span class="p">{</span>
+  <span class="nx">configure</span><span class="p">(</span><span class="nx">consumer</span><span class="p">:</span> <span class="nx">MiddlewareConsumer</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">consumer</span><span class="p">.</span><span class="nx">apply</span><span class="p">(</span><span class="nx">ValidateCustomerMiddleware</span><span class="p">).</span><span class="nx">forRoutes</span><span class="p">({</span>
+      <span class="na">path</span><span class="p">:</span> <span class="dl">"</span><span class="s2">customers/search/:id</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">method</span><span class="p">:</span> <span class="nx">RequestMethod</span><span class="p">.</span><span class="nx">GET</span><span class="p">,</span>
+    <span class="p">});</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>module파일의 쓰임새가 여기서 도드라지게 나타난다 기존에는 그냥 service를 붙여주는 곳으로만 생각했는데 middleware도 여기서 붙여줄 수 있다.</p>
+
+<p>NestModule이라는 interface를 구현하고 있으며 configure 함수 내부에 apply 함수로 우리가 작성했던 ValidateCustomerMiddleware를 붙여주고 .forRoutes({})로 middleware를 설정해 줄 path도 설정이 가능하다.</p>
+
+<p>현재는 ‘customers/search/:id’ 에다가만 middleware를 붙여주었고, 실제 postman으로 test해보면</p>
+
+<p><img src="/img/nest_3/1.png" width="100%" /></p>
+
+<p><img src="/img/nest_3/2.png" /></p>
+
+<p>이렇게 결과가 나오는 것을 볼 수 있다. middleware를 들렸다 왔다는 증거로 저렇게 console에 log가 찍히게 되는 것이다.</p>
+
+<p>추후에 JWTToken을 통해서 로그인 확인을 할 때 middleware를 많이 사용하게 되는데 유용하게 사용할 수 있을 것 같다.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">@</span><span class="nd">Module</span><span class="p">({</span>
+  <span class="na">controllers</span><span class="p">:</span> <span class="p">[</span><span class="nx">CustomersController</span><span class="p">],</span>
+  <span class="na">providers</span><span class="p">:</span> <span class="p">[</span><span class="nx">CustomersService</span><span class="p">],</span>
+<span class="p">})</span>
+<span class="k">export</span> <span class="kd">class</span> <span class="nx">CustomersModule</span> <span class="k">implements</span> <span class="nx">NestModule</span> <span class="p">{</span>
+  <span class="nx">configure</span><span class="p">(</span><span class="nx">consumer</span><span class="p">:</span> <span class="nx">MiddlewareConsumer</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// consumer.apply(ValidateCustomerMiddleware).forRoutes(</span>
+    <span class="c1">//   {</span>
+    <span class="c1">//     path: 'customers/search/:id',</span>
+    <span class="c1">//     method: RequestMethod.GET,</span>
+    <span class="c1">//   },</span>
+    <span class="c1">//   {</span>
+    <span class="c1">//     path: 'customers/:id',</span>
+    <span class="c1">//     method: RequestMethod.GET,</span>
+    <span class="c1">//   },</span>
+    <span class="c1">// );</span>
+    <span class="nx">consumer</span><span class="p">.</span><span class="nx">apply</span><span class="p">(</span><span class="nx">ValidateCustomerMiddleware</span><span class="p">).</span><span class="nx">forRoutes</span><span class="p">(</span><span class="nx">CustomersController</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>이렇게 controller를 통째로 붙여주면 controller에 속하는 모든 route들에 middleware를 붙여줄 수 있다.</p>
+
+<p>exclude 함수를 사용해서 전체중에 제외시킬 수 있다. 예를 들면,</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">{</span> <span class="nx">Injectable</span><span class="p">,</span> <span class="nx">NestMiddleware</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">@nestjs/common</span><span class="dl">"</span><span class="p">;</span>
+<span class="k">import</span> <span class="p">{</span> <span class="nx">NextFunction</span><span class="p">,</span> <span class="nx">Request</span><span class="p">,</span> <span class="nx">Response</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">express</span><span class="dl">"</span><span class="p">;</span>
+
+<span class="p">@</span><span class="nd">Injectable</span><span class="p">()</span>
+<span class="k">export</span> <span class="kd">class</span> <span class="nx">ValidateCustomerMiddleware</span> <span class="k">implements</span> <span class="nx">NestMiddleware</span> <span class="p">{</span>
+  <span class="nx">use</span><span class="p">(</span><span class="nx">req</span><span class="p">:</span> <span class="nx">Request</span><span class="p">,</span> <span class="nx">res</span><span class="p">:</span> <span class="nx">Response</span><span class="p">,</span> <span class="nx">next</span><span class="p">:</span> <span class="nx">NextFunction</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">Hello, world. Iam inside ValidateCustomerMiddleware!</span><span class="dl">"</span><span class="p">);</span>
+
+    <span class="kd">const</span> <span class="p">{</span> <span class="nx">authorization</span> <span class="p">}</span> <span class="o">=</span> <span class="nx">req</span><span class="p">.</span><span class="nx">headers</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">authorization</span><span class="p">)</span>
+      <span class="k">return</span> <span class="nx">res</span>
+        <span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mi">403</span><span class="p">)</span>
+        <span class="p">.</span><span class="nx">send</span><span class="p">({</span> <span class="na">error</span><span class="p">:</span> <span class="dl">"</span><span class="s2">No Authentication Token Provided</span><span class="dl">"</span> <span class="p">});</span>
+
+    <span class="nx">next</span><span class="p">();</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>처럼 header에서 authorization으로 jwtToken을 받고, token이 같이 넘어오지 않는다면, next() function으로 넘어가서 해당 url에 service 기능을 수행하는 것이 아니라, 바로 return해서 authentication이 제대로 되지 않았다고 알려준다.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">authorization</span> <span class="o">===</span> <span class="dl">"</span><span class="s2">test</span><span class="dl">"</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">next</span><span class="p">();</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">res</span>
+      <span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mi">403</span><span class="p">)</span>
+      <span class="p">.</span><span class="nx">send</span><span class="p">({</span> <span class="na">error</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Invalid Authentication Token Provided.</span><span class="dl">"</span> <span class="p">});</span>
+  <span class="p">}</span>
+  
+</code></pre></div></div>
+<p>이런식으로 들어온 authorization을 검토해서 조건에 맞게 실행시킬 수 있다. 물론 실제 로그인 체크를 할 때는 위의 코드처럼 하지 않는다.</p>
+
+<p>새로운 middleware 파일 valid-customer-account.middleware.ts을 만들어보자.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+  <span class="k">import</span> <span class="p">{</span> <span class="nx">Injectable</span><span class="p">,</span> <span class="nx">NestMiddleware</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@nestjs/common</span><span class="dl">'</span><span class="p">;</span>
+  <span class="k">import</span> <span class="p">{</span> <span class="nx">NextFunction</span><span class="p">,</span> <span class="nx">Request</span><span class="p">,</span> <span class="nx">Response</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">express</span><span class="dl">'</span><span class="p">;</span>
+
+  <span class="p">@</span><span class="nd">Injectable</span><span class="p">()</span>
+  <span class="k">export</span> <span class="kd">class</span> <span class="nx">ValidateCustomerAccount</span> <span class="k">implements</span> <span class="nx">NestMiddleware</span> <span class="p">{</span>
+    <span class="nx">use</span><span class="p">(</span><span class="nx">req</span><span class="p">:</span> <span class="nx">Request</span><span class="p">,</span> <span class="nx">res</span><span class="p">:</span> <span class="nx">Response</span><span class="p">,</span> <span class="nx">next</span><span class="p">:</span> <span class="nx">NextFunction</span><span class="p">)</span> <span class="p">{</span>
+      <span class="kd">const</span> <span class="p">{</span> <span class="nx">valid</span> <span class="p">}</span> <span class="o">=</span> <span class="nx">req</span><span class="p">.</span><span class="nx">headers</span><span class="p">;</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">valid</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">next</span><span class="p">();</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="nx">res</span><span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mi">401</span><span class="p">).</span><span class="nx">send</span><span class="p">({</span> <span class="na">error</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Account is invalid</span><span class="dl">'</span> <span class="p">});</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>여러개의 middleware를 적용시켜 줄때는 module 파일에서 그냥 , 찍고 붙여주면 된다.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+  <span class="k">export</span> <span class="kd">class</span> <span class="nx">CustomersModule</span> <span class="k">implements</span> <span class="nx">NestModule</span> <span class="p">{</span>
+    <span class="nx">configure</span><span class="p">(</span><span class="nx">consumer</span><span class="p">:</span> <span class="nx">MiddlewareConsumer</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">consumer</span>
+        <span class="p">.</span><span class="nx">apply</span><span class="p">(</span><span class="nx">ValidateCustomerMiddleware</span><span class="p">,</span> <span class="nx">ValidateCustomerAccount</span><span class="p">)</span>
+        <span class="p">.</span><span class="nx">forRoutes</span><span class="p">(</span>
+          <span class="p">{</span>
+            <span class="na">path</span><span class="p">:</span> <span class="dl">'</span><span class="s1">customers/search/:id</span><span class="dl">'</span><span class="p">,</span>
+            <span class="na">method</span><span class="p">:</span> <span class="nx">RequestMethod</span><span class="p">.</span><span class="nx">GET</span><span class="p">,</span>
+          <span class="p">},</span>
+          <span class="p">{</span>
+            <span class="na">path</span><span class="p">:</span> <span class="dl">'</span><span class="s1">customers/:id</span><span class="dl">'</span><span class="p">,</span>
+            <span class="na">method</span><span class="p">:</span> <span class="nx">RequestMethod</span><span class="p">.</span><span class="nx">GET</span><span class="p">,</span>
+          <span class="p">},</span>
+        <span class="p">);</span>
+      <span class="c1">// consumer.apply(ValidateCustomerMiddleware).forRoutes(CustomersController);</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>이렇게 되면 먼저 붙여준 ValidateCustomerMiddleware를 들리고 충족한다면 next() function을 통해 ValidateCustomerAccount로 들어가게 된다. ValidateCustomerAccount까지 통과해야만 해당 url의 service 기능까지 갈 수 있다.</p>
+
+<p>여기까지해서 Middleware장을 마치도록 하겠다.</p>
+
+<p>Middleware는 쉽게 생각해서 controller의 url에 공통적으로 먼저 체크해야되는 기능을 거쳐서 url로 접속할 수 있게 하는 filter정도로 생각하면 된다.</p>
+:ET
