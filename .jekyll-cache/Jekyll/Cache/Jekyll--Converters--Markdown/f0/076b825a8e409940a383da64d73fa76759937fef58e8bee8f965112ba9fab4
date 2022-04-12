@@ -1,0 +1,297 @@
+I"�t<h2 id="exceptions--handling-exceptions">Exceptions &amp; Handling Exceptions</h2>
+<p>exception들을 따로 모아줄 수 있는 폴더를 만들어서 관리해보자.</p>
+
+<p>users/exceptions/UserNotFound.exception.ts 파일을 만들어보자.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">HttpException</span><span class="p">,</span> <span class="nx">HttpStatus</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@nestjs/common</span><span class="dl">'</span><span class="p">;</span>
+
+    <span class="k">export</span> <span class="kd">class</span> <span class="nx">UserNotFoundException</span> <span class="kd">extends</span> <span class="nx">HttpException</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">(</span><span class="nx">msg</span><span class="p">:</span> <span class="kr">string</span><span class="p">,</span> <span class="nx">status</span><span class="p">:</span> <span class="nx">HttpStatus</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">super</span><span class="p">(</span><span class="nx">msg</span> <span class="o">||</span> <span class="dl">'</span><span class="s1">User Not Found</span><span class="dl">'</span><span class="p">,</span> <span class="nx">status</span> <span class="o">||</span> <span class="nx">HttpStatus</span><span class="p">.</span><span class="nx">NOT_FOUND</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>이렇게 새로운 나만의 exception을 만들어 사용할 수 있다. 사실 한번도 내가 exception을 만들어 사용해본 적은 없다. 내가 사용할 exception들은 기존에 존재하던 범주 내에서 사용 가능한 것들이 대부분이었다. 하지만 실제로 나만의 서비스에서 뭔가 내가 나만의 기능에서의 공통된 exception을 주고싶을 때는 따로 이렇게 파일로 만들어 사용하는 것도 괜찮은 것 같다.</p>
+
+<p>controller 에서는</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="p">@</span><span class="nd">UseInterceptors</span><span class="p">(</span><span class="nx">ClassSerializerInterceptor</span><span class="p">)</span>
+    <span class="p">@</span><span class="nd">Get</span><span class="p">(</span><span class="dl">'</span><span class="s1">id/:id</span><span class="dl">'</span><span class="p">)</span>
+    <span class="nx">getById</span><span class="p">(@</span><span class="nd">Param</span><span class="p">(</span><span class="dl">'</span><span class="s1">id</span><span class="dl">'</span><span class="p">,</span> <span class="nx">ParseIntPipe</span><span class="p">)</span> <span class="nx">id</span><span class="p">:</span> <span class="kr">number</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">user</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">userService</span><span class="p">.</span><span class="nx">getUserById</span><span class="p">(</span><span class="nx">id</span><span class="p">);</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="nx">user</span><span class="p">)</span> <span class="k">return</span> <span class="k">new</span> <span class="nx">SerializedUser</span><span class="p">(</span><span class="nx">user</span><span class="p">);</span>
+        <span class="k">else</span> <span class="p">{</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="nx">UserNotFoundException</span><span class="p">(</span><span class="dl">''</span><span class="p">,</span> <span class="nx">HttpStatus</span><span class="p">.</span><span class="nx">BAD_REQUEST</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+</code></pre></div></div>
+<p>이렇게 그냥 기존에 HttpException을 사용하는 것처럼 사용해주면 된다. else로 throw new UserNotFoundException을 해주지 않으면 실제로 user를 찾지 못한 경우에 아무런 return도 돌아오지 않고 else로 처리를 해줘야 아래 그림처럼 정상적으로 exception msg가 전달된다.</p>
+
+<p><img src="/img/nest_4/1.png" />
+<img src="/img/nest_4/2.png" /></p>
+
+<p>nestjs에는 built-in 된 exception들이 많이 존재하며 실제로 우리가 개발하며 부딫히는 exception들은 대부분 이 범주내에 존재할 것이다. 존재하는 exception은 아래 그림과 같다.</p>
+
+<p><img src="/img/nest_4/3.png" /></p>
+
+<h3 id="exception-filters">Exception Filters</h3>
+<p>built-in 된 exception을 나의 입맛에 맞게 완전 custom을 가능하게 해주는 방법이다. 기존에 만들어진 틀에 맞춰서 사용할 수도 있지만 기본 기능은 쓰되 내가 만약 특정 exception에 대해서 나의 서비스에서는 로그를 남긴다던가 추가 기능을 사용하고 싶을 때 사용하는 기능이다.</p>
+
+<p>users/filters/HttpException.filter.ts 파일을 만들어보자.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">HttpException</span><span class="p">,</span> <span class="nx">HttpStatus</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@nestjs/common</span><span class="dl">'</span><span class="p">;</span>
+
+    <span class="k">export</span> <span class="kd">class</span> <span class="nx">UserNotFoundException</span> <span class="kd">extends</span> <span class="nx">HttpException</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">(</span><span class="nx">msg</span><span class="p">:</span> <span class="kr">string</span><span class="p">,</span> <span class="nx">status</span><span class="p">:</span> <span class="nx">HttpStatus</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">super</span><span class="p">(</span><span class="nx">msg</span> <span class="o">||</span> <span class="dl">'</span><span class="s1">User Not Found</span><span class="dl">'</span><span class="p">,</span> <span class="nx">status</span> <span class="o">||</span> <span class="nx">HttpStatus</span><span class="p">.</span><span class="nx">NOT_FOUND</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>controller에서 filter를 사용해주려면, @UseFilters(HttpExceptionFilter) annotation을 붙여서 사용해주어야 한다.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="p">@</span><span class="nd">UseInterceptors</span><span class="p">(</span><span class="nx">ClassSerializerInterceptor</span><span class="p">)</span>
+    <span class="p">@</span><span class="nd">UseFilters</span><span class="p">(</span><span class="nx">HttpExceptionFilter</span><span class="p">)</span>
+    <span class="p">@</span><span class="nd">Get</span><span class="p">(</span><span class="dl">'</span><span class="s1">id/:id</span><span class="dl">'</span><span class="p">)</span>
+    <span class="nx">getById</span><span class="p">(@</span><span class="nd">Param</span><span class="p">(</span><span class="dl">'</span><span class="s1">id</span><span class="dl">'</span><span class="p">,</span> <span class="nx">ParseIntPipe</span><span class="p">)</span> <span class="nx">id</span><span class="p">:</span> <span class="kr">number</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">user</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">userService</span><span class="p">.</span><span class="nx">getUserById</span><span class="p">(</span><span class="nx">id</span><span class="p">);</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="nx">user</span><span class="p">)</span> <span class="k">return</span> <span class="k">new</span> <span class="nx">SerializedUser</span><span class="p">(</span><span class="nx">user</span><span class="p">);</span>
+        <span class="k">else</span> <span class="p">{</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="nx">NotFoundException</span><span class="p">();</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>이렇게 사용해주면 원래 built-in 되어있던 NotFoundException을 발생시켰을 때 우리가 보던거랑은 다른 결과가 나온다. 기존에 구현되어있던 기능을 덮어쓰기 하여 나만의 기능으로 재탄생 시킨 것이다.</p>
+
+<p><img src="/img/nest_4/4.png" /></p>
+
+<p>우리는 log를 찍는 기능을 추가했고, response.sendStatus(exception.getStatus()) 로 status만 return 해주었기 때문에 기존에 날려주던 깔끔한 json 형식과는 다른 결과가 전송된다. 그리고 실제로 log가 찍히는 것을 볼 수 있다.</p>
+
+<p><img src="/img/nest_4/5.png" /></p>
+
+<p>@UseFilters가 붙은 곳에는 어떤 exception이 들어와도 filter에 있는 내용을 수행해서 결과가 return 된다.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="p">@</span><span class="nd">Catch</span><span class="p">(</span><span class="nx">HttpException</span><span class="p">)</span>
+    <span class="k">export</span> <span class="kd">class</span> <span class="nx">HttpExceptionFilter</span> <span class="k">implements</span> <span class="nx">ExceptionFilter</span> <span class="p">{</span>
+    <span class="k">catch</span><span class="p">(</span><span class="nx">exception</span><span class="p">:</span> <span class="nx">HttpException</span><span class="p">,</span> <span class="nx">host</span><span class="p">:</span> <span class="nx">ArgumentsHost</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">exception</span><span class="p">.</span><span class="nx">getResponse</span><span class="p">());</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">exception</span><span class="p">.</span><span class="nx">getStatus</span><span class="p">());</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">exception</span><span class="p">);</span>
+
+        <span class="kd">const</span> <span class="nx">context</span> <span class="o">=</span> <span class="nx">host</span><span class="p">.</span><span class="nx">switchToHttp</span><span class="p">();</span>
+        <span class="kd">const</span> <span class="nx">request</span> <span class="o">=</span> <span class="nx">context</span><span class="p">.</span><span class="nx">getRequest</span><span class="o">&lt;</span><span class="nx">Request</span><span class="o">&gt;</span><span class="p">();</span>
+        <span class="kd">const</span> <span class="nx">response</span> <span class="o">=</span> <span class="nx">context</span><span class="p">.</span><span class="nx">getResponse</span><span class="o">&lt;</span><span class="nx">Response</span><span class="o">&gt;</span><span class="p">();</span>
+
+        <span class="nx">response</span><span class="p">.</span><span class="nx">send</span><span class="p">({</span>
+        <span class="na">status</span><span class="p">:</span> <span class="nx">exception</span><span class="p">.</span><span class="nx">getStatus</span><span class="p">(),</span>
+        <span class="na">message</span><span class="p">:</span> <span class="nx">exception</span><span class="p">.</span><span class="nx">getResponse</span><span class="p">(),</span>
+        <span class="p">});</span>
+    <span class="p">}</span>
+    <span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>위와 같이 return 되는 형식을 기존의 방식과 맞춰주면 기존의 형식처럼 return 된다. 즉 기존에 built-in 되어있는 exception 함수들은 기본적으로 저렇게 구현되어있고, 우리가 입맛에 맞춰 바꿔 사용하려면 filter를 통해 사용해야 된다.</p>
+
+<h2 id="connecting-to-mysql-using-typeorm">Connecting to MySQL using TypeORM</h2>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>npm i --save @nestjs/typeorm typeorm mysql2
+</code></pre></div></div>
+<p>를 통해서 필요한 package들을 설치해준다.</p>
+
+<p>설치해주고 나면 app.module.ts 파일. 즉, 내가 지금 구성하고 있는 최상위 module파일에 imports 해주고 db 연결 정보를 적어준다.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">Module</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@nestjs/common</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">TypeOrmModule</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@nestjs/typeorm</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">CustomersModule</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">./customers/customers.module</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">UsersModule</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">./users/users.module</span><span class="dl">'</span><span class="p">;</span>
+
+    <span class="p">@</span><span class="nd">Module</span><span class="p">({</span>
+    <span class="na">imports</span><span class="p">:</span> <span class="p">[</span>
+        <span class="nx">CustomersModule</span><span class="p">,</span>
+        <span class="nx">UsersModule</span><span class="p">,</span>
+        <span class="nx">TypeOrmModule</span><span class="p">.</span><span class="nx">forRoot</span><span class="p">({</span>
+        <span class="na">type</span><span class="p">:</span> <span class="dl">'</span><span class="s1">mysql</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">host</span><span class="p">:</span> <span class="dl">'</span><span class="s1">localhost</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">port</span><span class="p">:</span> <span class="mi">3306</span><span class="p">,</span>
+        <span class="na">username</span><span class="p">:</span> <span class="dl">'</span><span class="s1">test</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">password</span><span class="p">:</span> <span class="dl">'</span><span class="s1">1111</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">database</span><span class="p">:</span> <span class="dl">'</span><span class="s1">tutorial_db</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">entities</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="na">synchronize</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+        <span class="p">}),</span>
+    <span class="p">],</span>
+    <span class="na">controllers</span><span class="p">:</span> <span class="p">[],</span>
+    <span class="na">providers</span><span class="p">:</span> <span class="p">[],</span>
+    <span class="p">})</span>
+    <span class="k">export</span> <span class="kd">class</span> <span class="nx">AppModule</span> <span class="p">{}</span>
+
+</code></pre></div></div>
+<p>이렇게 한후 npm run start:dev 를 해주게 되면 당연히 오류가 난다. 왜냐하면 아직 tutorial_db 라는 데이터베이스를 만들지 않았기 때문이다. 이제 그 작업을 해보자.</p>
+
+<p>‘tutorial_db’를 나의 local mysql에 database 생성을 해주고 실행을하면 오류가 사라지는 모습을 볼 수 있다.
+typeorm 폴더를 만들고 User.ts를 만들어보자. django에서의 model 역할을 하는 친구이다.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">Column</span><span class="p">,</span> <span class="nx">Entity</span><span class="p">,</span> <span class="nx">PrimaryGeneratedColumn</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">typeorm</span><span class="dl">'</span><span class="p">;</span>
+
+    <span class="p">@</span><span class="nd">Entity</span><span class="p">()</span>
+    <span class="k">export</span> <span class="kd">class</span> <span class="nx">User</span> <span class="p">{</span>
+    <span class="p">@</span><span class="nd">PrimaryGeneratedColumn</span><span class="p">({</span>
+        <span class="na">type</span><span class="p">:</span> <span class="dl">'</span><span class="s1">bigint</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">user_id</span><span class="dl">'</span><span class="p">,</span>
+    <span class="p">})</span>
+    <span class="nx">id</span><span class="p">:</span> <span class="kr">number</span><span class="p">;</span>
+
+    <span class="p">@</span><span class="nd">Column</span><span class="p">({</span>
+        <span class="na">nullable</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="na">default</span><span class="p">:</span> <span class="dl">''</span><span class="p">,</span>
+    <span class="p">})</span>
+    <span class="nx">username</span><span class="p">:</span> <span class="kr">string</span><span class="p">;</span>
+
+    <span class="p">@</span><span class="nd">Column</span><span class="p">({</span>
+        <span class="na">name</span><span class="p">:</span> <span class="dl">'</span><span class="s1">email_address</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">nullable</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="na">default</span><span class="p">:</span> <span class="dl">''</span><span class="p">,</span>
+    <span class="p">})</span>
+    <span class="nx">emailAddress</span><span class="p">:</span> <span class="kr">string</span><span class="p">;</span>
+
+    <span class="p">@</span><span class="nd">Column</span><span class="p">({</span>
+        <span class="na">nullable</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+        <span class="na">default</span><span class="p">:</span> <span class="dl">''</span><span class="p">,</span>
+    <span class="p">})</span>
+    <span class="nx">password</span><span class="p">:</span> <span class="kr">string</span><span class="p">;</span>
+
+    <span class="p">}</span>
+
+</code></pre></div></div>
+<p>python django에서의 model의 역할을 해준다. 근데 약간 더 직관적이라고 보인다 내눈엔.</p>
+
+<p>그리고 typeorm들을 관리하는 파일을 typeorm 폴더에 index.ts 파일로 생성해준다. 내용은,</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">User</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">./User</span><span class="dl">'</span><span class="p">;</span>
+
+    <span class="kd">const</span> <span class="nx">entities</span> <span class="o">=</span> <span class="p">[</span><span class="nx">User</span><span class="p">];</span>
+
+    <span class="k">export</span> <span class="p">{</span> <span class="nx">User</span> <span class="p">};</span>
+
+    <span class="k">export</span> <span class="k">default</span> <span class="nx">entities</span><span class="p">;</span>
+    
+</code></pre></div></div>
+
+<p>이렇게 생겼으며, 전체 entities를 export 해주고 전체 app.module.ts에서 entities 부분에 채워넣어준다.</p>
+
+<p><img src="/img/nest_4/6.png" /></p>
+
+<p>그리고 저장을 해주게 되면 synchronize가 true 상태이기 때문에 나의 mysql을 확인해보면 table이 생겼음을 알 수 있다.</p>
+
+<p>그럼 만들어진 database에 대해서 수정은 어떻게 할까?</p>
+
+<p>synchronize가 true이기 때문에 내용을,
+<img src="/img/nest_4/7.png" />
+이렇게 바꿔주고 저장을 하면 저절로 mysql에 반영되어있는 것을 알 수 있다.</p>
+
+<h2 id="saving-users-to-database">Saving Users to Database</h2>
+<p>그럼 실제로 데이터베이스에 user 정보를 저장해보자.</p>
+
+<p>먼저, user.controller.ts에 createUser함수를 만들어 url 받을 준비를 해보자.</p>
+
+<p>그리고 이전에 customer에 대해서 dto를 만들었던것 처럼 user에 대해서도 dto를 만들어주고 class-validator로 들어오는 정보를 validate해줄 건데, user의 정보에 대한 내용은 이전에 typeorm/User.ts를 보면 알 수 있다.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">IsEmail</span><span class="p">,</span> <span class="nx">IsNotEmpty</span><span class="p">,</span> <span class="nx">MinLength</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">class-validator</span><span class="dl">'</span><span class="p">;</span>
+
+    <span class="k">export</span> <span class="kd">class</span> <span class="nx">CreateUserDto</span> <span class="p">{</span>
+    <span class="p">@</span><span class="nd">IsNotEmpty</span><span class="p">()</span>
+    <span class="p">@</span><span class="nd">MinLength</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+    <span class="nx">username</span><span class="p">:</span> <span class="kr">string</span><span class="p">;</span>
+
+    <span class="p">@</span><span class="nd">IsNotEmpty</span><span class="p">()</span>
+    <span class="p">@</span><span class="nd">IsEmail</span><span class="p">()</span>
+    <span class="nx">email</span><span class="p">:</span> <span class="kr">string</span><span class="p">;</span>
+
+    <span class="p">@</span><span class="nd">IsNotEmpty</span><span class="p">()</span>
+    <span class="p">@</span><span class="nd">MinLength</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+    <span class="nx">password</span><span class="p">:</span> <span class="kr">string</span><span class="p">;</span>
+    <span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>위의 코드를 통해서 자동으로 들어오는 정보들을 검토하고 검토했을 때 적합하지 않으면 에러를 return 해준다.</p>
+
+<p><img src="/img/nest_4/8.png" /></p>
+
+<p>이렇게 해당하는 validator에 걸리면 오류가 난다.</p>
+
+<p>그러면 이제 진짜로 url도 준비하고 service도 구현해서 실제로 database에 날라오는 정보를 넣어보자. 일단 controller에 새로운 url을 받을 준비를 해주자.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+  <span class="p">@</span><span class="nd">Post</span><span class="p">(</span><span class="dl">'</span><span class="s1">create</span><span class="dl">'</span><span class="p">)</span>
+  <span class="p">@</span><span class="nd">UsePipes</span><span class="p">(</span><span class="nx">ValidationPipe</span><span class="p">)</span>
+  <span class="nx">createUser</span><span class="p">(@</span><span class="nd">Body</span><span class="p">()</span> <span class="nx">createUserDto</span><span class="p">:</span> <span class="nx">CreateUserDto</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">userService</span><span class="p">.</span><span class="nx">createUser</span><span class="p">(</span><span class="nx">createUserDto</span><span class="p">);</span>
+  <span class="p">}</span>
+
+</code></pre></div></div>
+<p>UsePipes(ValidationPipe) 해주는 것을 잊지말자. 그리고 @Body()로 받는 것도 참 신기하고 편한 일이다.</p>
+
+<p>controller에서 준비가 되었다면 이제 실제 구현하는 service를 구현해보자. service를 구성하는데에는 조금 생소한 노력이 들어간다. 아래의 코드를 보자.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="p">@</span><span class="nd">Injectable</span><span class="p">()</span>
+    <span class="k">export</span> <span class="kd">class</span> <span class="nx">UsersService</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">(</span>
+        <span class="p">@</span><span class="nd">InjectRepository</span><span class="p">(</span><span class="nx">UserEntity</span><span class="p">)</span>
+        <span class="k">private</span> <span class="k">readonly</span> <span class="nx">userRepository</span><span class="p">:</span> <span class="nx">Repository</span><span class="o">&lt;</span><span class="nx">UserEntity</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="p">)</span> <span class="p">{}</span>
+
+    <span class="k">private</span> <span class="nx">users</span><span class="p">:</span> <span class="nx">User</span><span class="p">[]</span> <span class="o">=</span> <span class="p">[];</span>
+
+    <span class="nx">getUsers</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">users</span><span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">user</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">plainToInstance</span><span class="p">(</span><span class="nx">SerializedUser</span><span class="p">,</span> <span class="nx">user</span><span class="p">));</span>
+    <span class="p">}</span>
+
+    <span class="nx">getUserByUserName</span><span class="p">(</span><span class="nx">name</span><span class="p">:</span> <span class="kr">string</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">users</span><span class="p">.</span><span class="nx">find</span><span class="p">((</span><span class="nx">u</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">u</span><span class="p">.</span><span class="nx">username</span> <span class="o">===</span> <span class="nx">name</span><span class="p">);</span>
+        <span class="c1">// const user = this.users.find((u) =&gt; u.username === name);</span>
+        <span class="c1">// if (user) return plainToInstance(SerializedUser, user);</span>
+    <span class="p">}</span>
+
+    <span class="nx">getUserById</span><span class="p">(</span><span class="nx">id</span><span class="p">:</span> <span class="kr">number</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">users</span><span class="p">.</span><span class="nx">find</span><span class="p">((</span><span class="nx">u</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">u</span><span class="p">.</span><span class="nx">id</span> <span class="o">===</span> <span class="nx">id</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="nx">createUser</span><span class="p">(</span><span class="nx">createUserDto</span><span class="p">:</span> <span class="nx">CreateUserDto</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">newUser</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">userRepository</span><span class="p">.</span><span class="nx">create</span><span class="p">(</span><span class="nx">createUserDto</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">userRepository</span><span class="p">.</span><span class="nx">save</span><span class="p">(</span><span class="nx">newUser</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>위의 코드를보면 createUser가 현재 우리가 구현해야할 함수이고 contructor를 보면 Repository를 private readonly로 @Inject해오는 것을 볼 수 있다.</p>
+
+<p>@Inject 해온 userRepository의 기능을 통해 create하고 save를 해주는 모습을 볼 수 있다.</p>
+
+<p>복잡한 과정을 알아서 척척해주는 typeorm같다.</p>
+
+<p>모든 준비를 마쳤다면, postman을 통해 해당 url로 post 전송하면 user가 database에 저장되는 것을 알 수 있다.</p>
+
+<p><img src="/img/nest_4/9.png" /></p>
+
+<p><img src="/img/nest_4/10.png" /></p>
+:ET
