@@ -1,0 +1,320 @@
+---
+layout: post
+title: "nest js tutorial #5"
+subtitle: "#5 authentication with passportJS and hasing password with BCrypt"
+date: 2022-04-14 00:00:00 +0900
+tag: nestjs
+background: "/img/bg-post.jpg"
+---
+
+## Authentication with PassportJS
+
+PassportJS를 통한 authentication하는 법을 알아보자. 일단 필요한 packages들 부터 설치해보자.
+
+```
+
+    npm i --save @nestjs/passport passport passport-local
+    npm i --save -D @types/passport-local
+
+```
+
+auth는 별도의 module 및 기능들을 가지도록 구현해준다. 그렇지 않고 다른 controller나 service에 들어있으면, 나중에 코드를 손보기가 쉽지 않기 때문이다.
+
+```
+    nest g module auth
+    nest g controller auth/controllers/auth
+    nest g service auth/services/auth
+
+```
+를 통해서 auth에 대한 module을 만들어준다. 아까 설치한 passport library를 사용해 authentication을 구현할 것이기 때문에, utils폴더에 LocalStrategy.ts 파일을 만들어서 어떻게 authentication을 구현할것인지 작성한다.
+
+```typescript
+
+    import { Inject, Injectable } from '@nestjs/common';
+    import { PassportStrategy } from '@nestjs/passport';
+    import { Strategy } from 'passport-local';
+    import { AuthService } from '../services/auth/auth.service';
+
+    @Injectable()
+    export class LocalStrategy extends PassportStrategy(Strategy) {
+    constructor(
+        @Inject('AUTH_SERVICE') private readonly authService: AuthService,
+    ) {
+        super();
+    }
+
+    async validate(username: string, password: string) {
+        this.authService.validateUser(username, password);
+    }
+    }
+
+```
+
+authService를 보면,
+
+```typescript
+
+    import { Inject, Injectable } from '@nestjs/common';
+    import { UsersService } from 'src/users/services/users/users.service';
+
+    @Injectable()
+    export class AuthService {
+        constructor(
+            @Inject('USER_SERVICE') private readonly userService: UsersService,
+        ) {}
+
+        async validateUser(username: string, password: string) {
+            const userDB = await this.userService.findUserByUsername(username);
+
+            if (userDB) {
+            console.log(userDB);
+            }
+        }
+    }
+
+```
+이렇게 작성하게된다. 여기서 의아해야할 점이 하나있다. 현재 우리는 auth에 대한 기능을 구현중이고, authService는 auth에 대한 실제 기능이 실행되는 곳이다. 그런데 constructor(@Inject('USER_SERVICE') private readonly userService: UsersService)를 보면 userService를 현재 service에서 사용하고 있다. 다른 service는 등록해주지 않았기 때문에 원래 사용할 수 없다. 그럼 등록을 해줘야되는데 어디서하는가. 잊지말자 module파일. module 파일은 controller 및 service, import module 등등을 관장하는 파일이다. 다른 service를 가져다 사용하려면 현제 작업중인 module에 붙여줘야 @Inject를 통해서 사용할 수 있다.
+
+```typescript
+
+    import { Module } from '@nestjs/common';
+    import { TypeOrmModule } from '@nestjs/typeorm';
+    import { User } from 'src/typeorm';
+    import { AuthController } from './controllers/auth/auth.controller';
+    import { AuthService } from './services/auth/auth.service';
+    import { UsersService } from '../users/services/users/users.service';
+    import { PassportModule } from '@nestjs/passport';
+    import { LocalStrategy } from './utils/LocalStrategy';
+
+    @Module({
+        imports: [TypeOrmModule.forFeature([User]), PassportModule],
+        controllers: [AuthController],
+        providers: [
+            {
+            provide: 'AUTH_SERVICE',
+            useClass: AuthService,
+            },
+            {
+            provide: 'USER_SERVICE',
+            useClass: UsersService,
+            },
+            LocalStrategy,
+        ],
+    })
+    export class AuthModule {}
+
+```
+
+위의 구현된 코드를 보면, imports에 TypeOrmModule.forFeature([User]) 가 붙어있다. 여기선 실제 repository역할을 하지 않는데 왜 필요하느냐, userService에서 의존성을 갖고 있기 때문에 userService를 사용해주려면 TypeOrModule을 붙여줘야 사용이 가능하다.
+
+또한 빼먹으면 안되는게 우리가 새운 LocalStrategy이다. 이를 붙여주기 위해 import 안에 PassportModule을 넣어준다.
+
+userService에는 authService에서 validator를 구현할 수 있게 findUserByUsername() 함수를 만들어준다.
+
+```typescript
+
+    findUserByUsername(username: string) {
+        return this.userRepository.findOne({ username });
+    }
+
+```
+
+다 준비가 되었다면, auth controller에서 실제 url로 받아볼 준비를 해보자.
+
+```typescript
+
+    import { Controller, Post, Request, UseGuards } from '@nestjs/common';
+    import { AuthGuard } from '@nestjs/passport';
+
+    @Controller('auth')
+    export class AuthController {
+
+        @UseGuards(AuthGuard('local'))
+        @Post('login')
+        async login(@Request() req) {
+            
+        }
+    }
+
+```
+
+postman을 통해서 api request를 보내보면 아래와같은 결과를 받을 수 있다.
+
+<img src="/img/nest_5/2.png" />
+
+controller에서 해당 url에 아무런 기능도 추가해주지 않았는데, 값이 return 된 것을 볼 수 있다. 왜그럴까?
+
+LocalStrategy가 auth.module에 붙어있기 때문에 validate가 실행되고 validate 안에는 authService.validateUser() 함수가 있기 때문에 자동으로 실행된 것이다. log가 찍힌것을 보면 주어진 username으로 찾은 user 정보가 찍혀있는 것을 볼 수 있다.
+
+@UseGuards(AuthGuard('local'))을 통해서 바로 LocalStrategy를 호출할 수 있었다.
+
+현재는 username으로만 User 정보를 가지고 오고 있다. password까지 비교해서 user 정보를 가지고 올 수 있게 수정해보자.
+
+auth.service.ts
+```typescript
+
+    import { Inject, Injectable } from '@nestjs/common';
+    import { UsersService } from 'src/users/services/users/users.service';
+
+    @Injectable()
+    export class AuthService {
+        constructor(
+            @Inject('USER_SERVICE') private readonly userService: UsersService,
+        ) {}
+
+        async validateUser(username: string, password: string) {
+            console.log('Inside validateUser');
+
+            const userDB = await this.userService.findUserByUsername(username);
+
+            if (userDB && userDB.password === password) {
+            console.log('user validation success!');
+            return userDB;
+            }
+            console.log('User Validation Failed!');
+            
+            return null;
+        }
+    }
+
+```
+
+return 된 값은 LocalStrategy로 가기 때문에 해당되는 validate function도 수정해보자.
+
+```typescript
+
+    import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+    import { PassportStrategy } from '@nestjs/passport';
+    import { Strategy } from 'passport-local';
+    import { AuthService } from '../services/auth/auth.service';
+
+    @Injectable()
+    export class LocalStrategy extends PassportStrategy(Strategy) {
+        constructor(
+            @Inject('AUTH_SERVICE') private readonly authService: AuthService,
+        ) {
+            super();
+        }
+
+        async validate(username: string, password: string) {
+            console.log('Inside LocalStrategy.validate');
+            console.log(username);
+            console.log(password);
+
+            const user = await this.authService.validateUser(username, password);
+
+            if (!user){
+                throw new UnauthorizedException();
+            }
+            return user;
+        }
+    }
+
+```
+
+이렇게 바꿔주면, postman으로 request를 날렸을 때 찍히는 log는 아래 사진과 같이 된다.
+
+<img src="/img/nest_5/3.png" />
+
+
+
+## Hashing Passwords with BCrypt
+
+hasing 하는 법을 알아보자! 일단 필요한 package부터 설치해보자.
+
+```
+    npm install --save @types/bcrypt
+
+```
+
+password가 input으로 들어오면 그대로 저장하면 안되기 때문에 bcrypt 과정을 통해 암호화해서 저장한다. 우리가 작성한 파일을 수정해보자.
+
+먼저 controller 부터 점검해본다. 어떤 url로 들어오는지 먼저 점검하고 실제 기능이 구현되는 service 파일을 본다.
+
+```typescript
+
+    createUser(createUserDto: CreateUserDto) {
+        const password = encodePassword(createUserDto.password);
+        console.log(password);
+        
+        const newUser = this.userRepository.create({...createUserDto, password});
+        return this.userRepository.save(newUser);
+    }
+
+```
+위의 코드를 보면 createUserDto 형식으로 들어온 데이터 중 password를 꺼내서 encodePassword 해주고 실제 create data할때는 encode 된 password를 넣어주는 방식으로 되어있다.
+
+그렇다면 encodePassword는 어떻게 만들까?
+
+먼저 src/utils/bcrypt.ts 파일을 생성한다. 내용은 아래와 같다.
+
+```typescript
+
+    import * as bcrypt from 'bcrypt';
+
+    export function encodePassword(rawPassword: string) {
+    const SALT = bcrypt.genSaltSync();
+    return bcrypt.hashSync(rawPassword, SALT);
+    }
+
+```
+별건 없다. 있는 그대로의 bcrypt의 기능을 사용해주는 것이다. 들어온 rawPassword를 bcrypt로 암호화 해준뒤 return 해주는데 여기서 SALT는 말그대로 소금이다. 밥을 할 때 밥 짓는 법을 모두가 다 알기 때문에 해킹에 취약할 수 있다. 따라서 나의 입맛에 맞게 나만의 salt를 추가해서 해킹을 방지하고자 들어가 있는 것이다.
+
+postman에서 url로 request를 날려주면, 아래와 같이 실행됨을 볼 수 있다.
+
+<img src="/img/nest_5/1.png" />
+
+이제 이전에 passport를 연결하던 auth를 실제 입력으로 들어온 비밀번호를 비교하는 것이 아니라 hash된 비밀번호의 비교를 통해서 로그인 기능을 구현해보자.
+
+```typescript
+
+    export function comparePasswords(rawPassword: string, hash: string) {
+        return bcrypt.compareSync(rawPassword, hash);
+    }
+
+```
+
+실제 로그인 함수가 구현되는 auth.service 구현은
+
+```typescript
+
+    import { Inject, Injectable } from '@nestjs/common';
+    import { UsersService } from 'src/users/services/users/users.service';
+    import { comparePasswords } from 'src/utils/bcrypt';
+
+    @Injectable()
+    export class AuthService {
+        constructor(
+            @Inject('USER_SERVICE') private readonly userService: UsersService,
+        ) {}
+
+        async validateUser(username: string, password: string) {
+            console.log('Inside validateUser');
+
+            const userDB = await this.userService.findUserByUsername(username);
+
+            if (userDB) {
+            const matched = comparePasswords(password, userDB.password);
+            if(matched) {
+                console.log('user validation success!');
+                return userDB;
+            } else {
+                console.log("passwords do not matched");
+                return null;
+            }
+            }
+            console.log('User Validation Failed!');
+            
+            return null;
+        }
+    }
+
+```
+
+이렇게 구현할 수 있다.
+
+base_url/api/auth/login 으로 postman request를 날려주면, auth controller에는 login에 대해서 service나 기능을 구현하지 않았지만, 위에 붙은 @UseGuards(AuthGuard('local')) 을 통해서 바로 LocalStrategy로 들어가게 되고, 구현된 validate 함수로 실제 로그인한 회원이 실제 회원이 맞는지 검토한다.
+
+여기서 authService를 사용하게 되고, authService 내에 구현된 userService를 사용하기 위해 module에 provider를 붙여준 것이다.
+
+서로 파일들이 엉키고 엉겨 있지만 하나씩 들여다 보면 그렇게 또 막 어렵지는 않다. 이제 조금만 더하면 tutorial은 끝날 것 같으니, 얼른 새로운 실제 toy 프로젝트를 진행해보자.
