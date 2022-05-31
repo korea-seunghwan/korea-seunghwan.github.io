@@ -1,0 +1,296 @@
+I"2�<h2 id="authentication-with-passportjs">Authentication with PassportJS</h2>
+
+<p>PassportJS를 통한 authentication하는 법을 알아보자. 일단 필요한 packages들 부터 설치해보자.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    npm i --save @nestjs/passport passport passport-local
+    npm i --save -D @types/passport-local
+
+</code></pre></div></div>
+
+<p>auth는 별도의 module 및 기능들을 가지도록 구현해준다. 그렇지 않고 다른 controller나 service에 들어있으면, 나중에 코드를 손보기가 쉽지 않기 때문이다.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    nest g module auth
+    nest g controller auth/controllers/auth
+    nest g service auth/services/auth
+
+</code></pre></div></div>
+<p>를 통해서 auth에 대한 module을 만들어준다. 아까 설치한 passport library를 사용해 authentication을 구현할 것이기 때문에, utils폴더에 LocalStrategy.ts 파일을 만들어서 어떻게 authentication을 구현할것인지 작성한다.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">Inject</span><span class="p">,</span> <span class="nx">Injectable</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@nestjs/common</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">PassportStrategy</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@nestjs/passport</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">Strategy</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">passport-local</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">AuthService</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">../services/auth/auth.service</span><span class="dl">'</span><span class="p">;</span>
+
+    <span class="p">@</span><span class="nd">Injectable</span><span class="p">()</span>
+    <span class="k">export</span> <span class="kd">class</span> <span class="nx">LocalStrategy</span> <span class="kd">extends</span> <span class="nx">PassportStrategy</span><span class="p">(</span><span class="nx">Strategy</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">constructor</span><span class="p">(</span>
+        <span class="p">@</span><span class="nd">Inject</span><span class="p">(</span><span class="dl">'</span><span class="s1">AUTH_SERVICE</span><span class="dl">'</span><span class="p">)</span> <span class="k">private</span> <span class="k">readonly</span> <span class="nx">authService</span><span class="p">:</span> <span class="nx">AuthService</span><span class="p">,</span>
+    <span class="p">)</span> <span class="p">{</span>
+        <span class="k">super</span><span class="p">();</span>
+    <span class="p">}</span>
+
+    <span class="k">async</span> <span class="nx">validate</span><span class="p">(</span><span class="nx">username</span><span class="p">:</span> <span class="kr">string</span><span class="p">,</span> <span class="nx">password</span><span class="p">:</span> <span class="kr">string</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">authService</span><span class="p">.</span><span class="nx">validateUser</span><span class="p">(</span><span class="nx">username</span><span class="p">,</span> <span class="nx">password</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>authService를 보면,</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">Inject</span><span class="p">,</span> <span class="nx">Injectable</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@nestjs/common</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">UsersService</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">src/users/services/users/users.service</span><span class="dl">'</span><span class="p">;</span>
+
+    <span class="p">@</span><span class="nd">Injectable</span><span class="p">()</span>
+    <span class="k">export</span> <span class="kd">class</span> <span class="nx">AuthService</span> <span class="p">{</span>
+        <span class="kd">constructor</span><span class="p">(</span>
+            <span class="p">@</span><span class="nd">Inject</span><span class="p">(</span><span class="dl">'</span><span class="s1">USER_SERVICE</span><span class="dl">'</span><span class="p">)</span> <span class="k">private</span> <span class="k">readonly</span> <span class="nx">userService</span><span class="p">:</span> <span class="nx">UsersService</span><span class="p">,</span>
+        <span class="p">)</span> <span class="p">{}</span>
+
+        <span class="k">async</span> <span class="nx">validateUser</span><span class="p">(</span><span class="nx">username</span><span class="p">:</span> <span class="kr">string</span><span class="p">,</span> <span class="nx">password</span><span class="p">:</span> <span class="kr">string</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">const</span> <span class="nx">userDB</span> <span class="o">=</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">userService</span><span class="p">.</span><span class="nx">findUserByUsername</span><span class="p">(</span><span class="nx">username</span><span class="p">);</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="nx">userDB</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">userDB</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+</code></pre></div></div>
+<p>이렇게 작성하게된다. 여기서 의아해야할 점이 하나있다. 현재 우리는 auth에 대한 기능을 구현중이고, authService는 auth에 대한 실제 기능이 실행되는 곳이다. 그런데 constructor(@Inject(‘USER_SERVICE’) private readonly userService: UsersService)를 보면 userService를 현재 service에서 사용하고 있다. 다른 service는 등록해주지 않았기 때문에 원래 사용할 수 없다. 그럼 등록을 해줘야되는데 어디서하는가. 잊지말자 module파일. module 파일은 controller 및 service, import module 등등을 관장하는 파일이다. 다른 service를 가져다 사용하려면 현제 작업중인 module에 붙여줘야 @Inject를 통해서 사용할 수 있다.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">Module</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@nestjs/common</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">TypeOrmModule</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@nestjs/typeorm</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">User</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">src/typeorm</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">AuthController</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">./controllers/auth/auth.controller</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">AuthService</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">./services/auth/auth.service</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">UsersService</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">../users/services/users/users.service</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">PassportModule</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@nestjs/passport</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">LocalStrategy</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">./utils/LocalStrategy</span><span class="dl">'</span><span class="p">;</span>
+
+    <span class="p">@</span><span class="nd">Module</span><span class="p">({</span>
+        <span class="na">imports</span><span class="p">:</span> <span class="p">[</span><span class="nx">TypeOrmModule</span><span class="p">.</span><span class="nx">forFeature</span><span class="p">([</span><span class="nx">User</span><span class="p">]),</span> <span class="nx">PassportModule</span><span class="p">],</span>
+        <span class="na">controllers</span><span class="p">:</span> <span class="p">[</span><span class="nx">AuthController</span><span class="p">],</span>
+        <span class="na">providers</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">{</span>
+            <span class="na">provide</span><span class="p">:</span> <span class="dl">'</span><span class="s1">AUTH_SERVICE</span><span class="dl">'</span><span class="p">,</span>
+            <span class="na">useClass</span><span class="p">:</span> <span class="nx">AuthService</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+            <span class="na">provide</span><span class="p">:</span> <span class="dl">'</span><span class="s1">USER_SERVICE</span><span class="dl">'</span><span class="p">,</span>
+            <span class="na">useClass</span><span class="p">:</span> <span class="nx">UsersService</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="nx">LocalStrategy</span><span class="p">,</span>
+        <span class="p">],</span>
+    <span class="p">})</span>
+    <span class="k">export</span> <span class="kd">class</span> <span class="nx">AuthModule</span> <span class="p">{}</span>
+
+</code></pre></div></div>
+
+<p>위의 구현된 코드를 보면, imports에 TypeOrmModule.forFeature([User]) 가 붙어있다. 여기선 실제 repository역할을 하지 않는데 왜 필요하느냐, userService에서 의존성을 갖고 있기 때문에 userService를 사용해주려면 TypeOrModule을 붙여줘야 사용이 가능하다.</p>
+
+<p>또한 빼먹으면 안되는게 우리가 새운 LocalStrategy이다. 이를 붙여주기 위해 import 안에 PassportModule을 넣어준다.</p>
+
+<p>userService에는 authService에서 validator를 구현할 수 있게 findUserByUsername() 함수를 만들어준다.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="nx">findUserByUsername</span><span class="p">(</span><span class="nx">username</span><span class="p">:</span> <span class="kr">string</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">userRepository</span><span class="p">.</span><span class="nx">findOne</span><span class="p">({</span> <span class="nx">username</span> <span class="p">});</span>
+    <span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>다 준비가 되었다면, auth controller에서 실제 url로 받아볼 준비를 해보자.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">Controller</span><span class="p">,</span> <span class="nx">Post</span><span class="p">,</span> <span class="nx">Request</span><span class="p">,</span> <span class="nx">UseGuards</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@nestjs/common</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">AuthGuard</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@nestjs/passport</span><span class="dl">'</span><span class="p">;</span>
+
+    <span class="p">@</span><span class="nd">Controller</span><span class="p">(</span><span class="dl">'</span><span class="s1">auth</span><span class="dl">'</span><span class="p">)</span>
+    <span class="k">export</span> <span class="kd">class</span> <span class="nx">AuthController</span> <span class="p">{</span>
+
+        <span class="p">@</span><span class="nd">UseGuards</span><span class="p">(</span><span class="nx">AuthGuard</span><span class="p">(</span><span class="dl">'</span><span class="s1">local</span><span class="dl">'</span><span class="p">))</span>
+        <span class="p">@</span><span class="nd">Post</span><span class="p">(</span><span class="dl">'</span><span class="s1">login</span><span class="dl">'</span><span class="p">)</span>
+        <span class="k">async</span> <span class="nx">login</span><span class="p">(@</span><span class="nd">Request</span><span class="p">()</span> <span class="nx">req</span><span class="p">)</span> <span class="p">{</span>
+            
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>postman을 통해서 api request를 보내보면 아래와같은 결과를 받을 수 있다.</p>
+
+<p><img src="/img/nest_5/2.png" /></p>
+
+<p>controller에서 해당 url에 아무런 기능도 추가해주지 않았는데, 값이 return 된 것을 볼 수 있다. 왜그럴까?</p>
+
+<p>LocalStrategy가 auth.module에 붙어있기 때문에 validate가 실행되고 validate 안에는 authService.validateUser() 함수가 있기 때문에 자동으로 실행된 것이다. log가 찍힌것을 보면 주어진 username으로 찾은 user 정보가 찍혀있는 것을 볼 수 있다.</p>
+
+<p>@UseGuards(AuthGuard(‘local’))을 통해서 바로 LocalStrategy를 호출할 수 있었다.</p>
+
+<p>현재는 username으로만 User 정보를 가지고 오고 있다. password까지 비교해서 user 정보를 가지고 올 수 있게 수정해보자.</p>
+
+<p>auth.service.ts</p>
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">Inject</span><span class="p">,</span> <span class="nx">Injectable</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@nestjs/common</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">UsersService</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">src/users/services/users/users.service</span><span class="dl">'</span><span class="p">;</span>
+
+    <span class="p">@</span><span class="nd">Injectable</span><span class="p">()</span>
+    <span class="k">export</span> <span class="kd">class</span> <span class="nx">AuthService</span> <span class="p">{</span>
+        <span class="kd">constructor</span><span class="p">(</span>
+            <span class="p">@</span><span class="nd">Inject</span><span class="p">(</span><span class="dl">'</span><span class="s1">USER_SERVICE</span><span class="dl">'</span><span class="p">)</span> <span class="k">private</span> <span class="k">readonly</span> <span class="nx">userService</span><span class="p">:</span> <span class="nx">UsersService</span><span class="p">,</span>
+        <span class="p">)</span> <span class="p">{}</span>
+
+        <span class="k">async</span> <span class="nx">validateUser</span><span class="p">(</span><span class="nx">username</span><span class="p">:</span> <span class="kr">string</span><span class="p">,</span> <span class="nx">password</span><span class="p">:</span> <span class="kr">string</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">Inside validateUser</span><span class="dl">'</span><span class="p">);</span>
+
+            <span class="kd">const</span> <span class="nx">userDB</span> <span class="o">=</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">userService</span><span class="p">.</span><span class="nx">findUserByUsername</span><span class="p">(</span><span class="nx">username</span><span class="p">);</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="nx">userDB</span> <span class="o">&amp;&amp;</span> <span class="nx">userDB</span><span class="p">.</span><span class="nx">password</span> <span class="o">===</span> <span class="nx">password</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">user validation success!</span><span class="dl">'</span><span class="p">);</span>
+            <span class="k">return</span> <span class="nx">userDB</span><span class="p">;</span>
+            <span class="p">}</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">User Validation Failed!</span><span class="dl">'</span><span class="p">);</span>
+            
+            <span class="k">return</span> <span class="kc">null</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>return 된 값은 LocalStrategy로 가기 때문에 해당되는 validate function도 수정해보자.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">Inject</span><span class="p">,</span> <span class="nx">Injectable</span><span class="p">,</span> <span class="nx">UnauthorizedException</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@nestjs/common</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">PassportStrategy</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@nestjs/passport</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">Strategy</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">passport-local</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">AuthService</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">../services/auth/auth.service</span><span class="dl">'</span><span class="p">;</span>
+
+    <span class="p">@</span><span class="nd">Injectable</span><span class="p">()</span>
+    <span class="k">export</span> <span class="kd">class</span> <span class="nx">LocalStrategy</span> <span class="kd">extends</span> <span class="nx">PassportStrategy</span><span class="p">(</span><span class="nx">Strategy</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">constructor</span><span class="p">(</span>
+            <span class="p">@</span><span class="nd">Inject</span><span class="p">(</span><span class="dl">'</span><span class="s1">AUTH_SERVICE</span><span class="dl">'</span><span class="p">)</span> <span class="k">private</span> <span class="k">readonly</span> <span class="nx">authService</span><span class="p">:</span> <span class="nx">AuthService</span><span class="p">,</span>
+        <span class="p">)</span> <span class="p">{</span>
+            <span class="k">super</span><span class="p">();</span>
+        <span class="p">}</span>
+
+        <span class="k">async</span> <span class="nx">validate</span><span class="p">(</span><span class="nx">username</span><span class="p">:</span> <span class="kr">string</span><span class="p">,</span> <span class="nx">password</span><span class="p">:</span> <span class="kr">string</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">Inside LocalStrategy.validate</span><span class="dl">'</span><span class="p">);</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">username</span><span class="p">);</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">password</span><span class="p">);</span>
+
+            <span class="kd">const</span> <span class="nx">user</span> <span class="o">=</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">authService</span><span class="p">.</span><span class="nx">validateUser</span><span class="p">(</span><span class="nx">username</span><span class="p">,</span> <span class="nx">password</span><span class="p">);</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">user</span><span class="p">){</span>
+                <span class="k">throw</span> <span class="k">new</span> <span class="nx">UnauthorizedException</span><span class="p">();</span>
+            <span class="p">}</span>
+            <span class="k">return</span> <span class="nx">user</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>이렇게 바꿔주면, postman으로 request를 날렸을 때 찍히는 log는 아래 사진과 같이 된다.</p>
+
+<p><img src="/img/nest_5/3.png" /></p>
+
+<h2 id="hashing-passwords-with-bcrypt">Hashing Passwords with BCrypt</h2>
+
+<p>hasing 하는 법을 알아보자! 일단 필요한 package부터 설치해보자.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    npm install --save @types/bcrypt
+
+</code></pre></div></div>
+
+<p>password가 input으로 들어오면 그대로 저장하면 안되기 때문에 bcrypt 과정을 통해 암호화해서 저장한다. 우리가 작성한 파일을 수정해보자.</p>
+
+<p>먼저 controller 부터 점검해본다. 어떤 url로 들어오는지 먼저 점검하고 실제 기능이 구현되는 service 파일을 본다.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="nx">createUser</span><span class="p">(</span><span class="nx">createUserDto</span><span class="p">:</span> <span class="nx">CreateUserDto</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">password</span> <span class="o">=</span> <span class="nx">encodePassword</span><span class="p">(</span><span class="nx">createUserDto</span><span class="p">.</span><span class="nx">password</span><span class="p">);</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">password</span><span class="p">);</span>
+        
+        <span class="kd">const</span> <span class="nx">newUser</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">userRepository</span><span class="p">.</span><span class="nx">create</span><span class="p">({...</span><span class="nx">createUserDto</span><span class="p">,</span> <span class="nx">password</span><span class="p">});</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">userRepository</span><span class="p">.</span><span class="nx">save</span><span class="p">(</span><span class="nx">newUser</span><span class="p">);</span>
+    <span class="p">}</span>
+
+</code></pre></div></div>
+<p>위의 코드를 보면 createUserDto 형식으로 들어온 데이터 중 password를 꺼내서 encodePassword 해주고 실제 create data할때는 encode 된 password를 넣어주는 방식으로 되어있다.</p>
+
+<p>그렇다면 encodePassword는 어떻게 만들까?</p>
+
+<p>먼저 src/utils/bcrypt.ts 파일을 생성한다. 내용은 아래와 같다.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="k">import</span> <span class="o">*</span> <span class="k">as</span> <span class="nx">bcrypt</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">bcrypt</span><span class="dl">'</span><span class="p">;</span>
+
+    <span class="k">export</span> <span class="kd">function</span> <span class="nx">encodePassword</span><span class="p">(</span><span class="nx">rawPassword</span><span class="p">:</span> <span class="kr">string</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">SALT</span> <span class="o">=</span> <span class="nx">bcrypt</span><span class="p">.</span><span class="nx">genSaltSync</span><span class="p">();</span>
+    <span class="k">return</span> <span class="nx">bcrypt</span><span class="p">.</span><span class="nx">hashSync</span><span class="p">(</span><span class="nx">rawPassword</span><span class="p">,</span> <span class="nx">SALT</span><span class="p">);</span>
+    <span class="p">}</span>
+
+</code></pre></div></div>
+<p>별건 없다. 있는 그대로의 bcrypt의 기능을 사용해주는 것이다. 들어온 rawPassword를 bcrypt로 암호화 해준뒤 return 해주는데 여기서 SALT는 말그대로 소금이다. 밥을 할 때 밥 짓는 법을 모두가 다 알기 때문에 해킹에 취약할 수 있다. 따라서 나의 입맛에 맞게 나만의 salt를 추가해서 해킹을 방지하고자 들어가 있는 것이다.</p>
+
+<p>postman에서 url로 request를 날려주면, 아래와 같이 실행됨을 볼 수 있다.</p>
+
+<p><img src="/img/nest_5/1.png" /></p>
+
+<p>이제 이전에 passport를 연결하던 auth를 실제 입력으로 들어온 비밀번호를 비교하는 것이 아니라 hash된 비밀번호의 비교를 통해서 로그인 기능을 구현해보자.</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="k">export</span> <span class="kd">function</span> <span class="nx">comparePasswords</span><span class="p">(</span><span class="nx">rawPassword</span><span class="p">:</span> <span class="kr">string</span><span class="p">,</span> <span class="nx">hash</span><span class="p">:</span> <span class="kr">string</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">bcrypt</span><span class="p">.</span><span class="nx">compareSync</span><span class="p">(</span><span class="nx">rawPassword</span><span class="p">,</span> <span class="nx">hash</span><span class="p">);</span>
+    <span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>실제 로그인 함수가 구현되는 auth.service 구현은</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">Inject</span><span class="p">,</span> <span class="nx">Injectable</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@nestjs/common</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">UsersService</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">src/users/services/users/users.service</span><span class="dl">'</span><span class="p">;</span>
+    <span class="k">import</span> <span class="p">{</span> <span class="nx">comparePasswords</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">src/utils/bcrypt</span><span class="dl">'</span><span class="p">;</span>
+
+    <span class="p">@</span><span class="nd">Injectable</span><span class="p">()</span>
+    <span class="k">export</span> <span class="kd">class</span> <span class="nx">AuthService</span> <span class="p">{</span>
+        <span class="kd">constructor</span><span class="p">(</span>
+            <span class="p">@</span><span class="nd">Inject</span><span class="p">(</span><span class="dl">'</span><span class="s1">USER_SERVICE</span><span class="dl">'</span><span class="p">)</span> <span class="k">private</span> <span class="k">readonly</span> <span class="nx">userService</span><span class="p">:</span> <span class="nx">UsersService</span><span class="p">,</span>
+        <span class="p">)</span> <span class="p">{}</span>
+
+        <span class="k">async</span> <span class="nx">validateUser</span><span class="p">(</span><span class="nx">username</span><span class="p">:</span> <span class="kr">string</span><span class="p">,</span> <span class="nx">password</span><span class="p">:</span> <span class="kr">string</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">Inside validateUser</span><span class="dl">'</span><span class="p">);</span>
+
+            <span class="kd">const</span> <span class="nx">userDB</span> <span class="o">=</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">userService</span><span class="p">.</span><span class="nx">findUserByUsername</span><span class="p">(</span><span class="nx">username</span><span class="p">);</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="nx">userDB</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">const</span> <span class="nx">matched</span> <span class="o">=</span> <span class="nx">comparePasswords</span><span class="p">(</span><span class="nx">password</span><span class="p">,</span> <span class="nx">userDB</span><span class="p">.</span><span class="nx">password</span><span class="p">);</span>
+            <span class="k">if</span><span class="p">(</span><span class="nx">matched</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">user validation success!</span><span class="dl">'</span><span class="p">);</span>
+                <span class="k">return</span> <span class="nx">userDB</span><span class="p">;</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">passwords do not matched</span><span class="dl">"</span><span class="p">);</span>
+                <span class="k">return</span> <span class="kc">null</span><span class="p">;</span>
+            <span class="p">}</span>
+            <span class="p">}</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">User Validation Failed!</span><span class="dl">'</span><span class="p">);</span>
+            
+            <span class="k">return</span> <span class="kc">null</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>이렇게 구현할 수 있다.</p>
+
+<p>base_url/api/auth/login 으로 postman request를 날려주면, auth controller에는 login에 대해서 service나 기능을 구현하지 않았지만, 위에 붙은 @UseGuards(AuthGuard(‘local’)) 을 통해서 바로 LocalStrategy로 들어가게 되고, 구현된 validate 함수로 실제 로그인한 회원이 실제 회원이 맞는지 검토한다.</p>
+
+<p>여기서 authService를 사용하게 되고, authService 내에 구현된 userService를 사용하기 위해 module에 provider를 붙여준 것이다.</p>
+
+<p>서로 파일들이 엉키고 엉겨 있지만 하나씩 들여다 보면 그렇게 또 막 어렵지는 않다. 이제 조금만 더하면 tutorial은 끝날 것 같으니, 얼른 새로운 실제 toy 프로젝트를 진행해보자.</p>
+:ET
