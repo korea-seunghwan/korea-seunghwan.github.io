@@ -29,19 +29,19 @@ Anaconda 설치 및 사용법은 따로 다루지 않겠다.
 
 jupyter notebook도 설치해준다
 
-![실행결과][/img/machine_learning_tutorial/1.png]
+![실행결과](/img/machine_learning_tutorial/1.png)
 
 ### Importing a DataSet
 
 kaggle에서 video games sales 검색해서 data를 다운로드 받자
 
-![실행결과2][/img/machine_learning_tutorial/2.png]
+![실행결과2](/img/machine_learning_tutorial/2.png)
 
 ### A Real Machine Learning Problem
 
 동영상 아래 링크에서 데이터를 다운로드 받을 수 있다. music.csv파일을 다운로드 받아서 data를 준비해주자.
 
-![실행결과3][/img/machine_learning_tutorial/3.png]
+![실행결과3](/img/machine_learning_tutorial/3.png)
 
 ### Preparing the Data
 
@@ -130,4 +130,4 @@ deep learning에서 모델 저장하고 불러오는거랑은 완전히 다른 �
                         filled=True)
 ```
 
-![실행결과3][/img/machine_learning_tutorial/4.png]
+![실행결과3](/img/machine_learning_tutorial/4.png)
