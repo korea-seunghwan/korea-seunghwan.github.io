@@ -14,46 +14,48 @@ background: "/img/bg-post.jpg"
 ### <문제> 1이 될 때까지
 
 내가 짠 코드
+
 ```python
 
-N, K = map(int, input().split())
+    N, K = map(int, input().split())
 
-count = 0
+    count = 0
 
-while N != 1:
-    if N % K == 0:
-        N = N // K
-    else:
-        N = N - 1
+    while N != 1:
+        if N % K == 0:
+            N = N // K
+        else:
+            N = N - 1
 
-    count+=1
+        count+=1
 
 ```
 
 
 정답예시 코드
+
 ```python
 
-n, k = map(int, input().split())
+    n, k = map(int, input().split())
 
-result = 0
+    result = 0
 
-while True:
-    # N이 K로 나누어 떨어지는 수가 될 때까지 빼기
-    target = (n // k) * k
-    result += (n - target)
-    n = target
-    # N이 K보다 작을 때 (더 이상 나눌 수 없을 때) 반복문 탈출
-    if n < k:
-        break
+    while True:
+        # N이 K로 나누어 떨어지는 수가 될 때까지 빼기
+        target = (n // k) * k
+        result += (n - target)
+        n = target
+        # N이 K보다 작을 때 (더 이상 나눌 수 없을 때) 반복문 탈출
+        if n < k:
+            break
 
-    # K로 나눠주기
-    result += 1
-    n /= k
+        # K로 나눠주기
+        result += 1
+        n /= k
 
-# 마지막으로 남은 수에 대하여 1씩 빼기
-result += (n-1)
-print(result)
+    # 마지막으로 남은 수에 대하여 1씩 빼기
+    result += (n-1)
+    print(result)
 
 ```
 
@@ -62,41 +64,43 @@ print(result)
 ### <문제> 곱하기 혹은 더하기
 
 내가 짠 코드
+
 ```python
 
-str_ints = map(int, input())
-result = 0
+    str_ints = map(int, input())
+    result = 0
 
-for idx, str_int in enumerate(str_ints):
-    if idx == 0:
-        result = str_int
-    
-    if result == 0 or str_int == 0:
-        result += str_int
-    else:
-        result *= str_int
+    for idx, str_int in enumerate(str_ints):
+        if idx == 0:
+            result = str_int
+        
+        if result == 0 or str_int == 0:
+            result += str_int
+        else:
+            result *= str_int
 
-print(result)
+    print(result)
 
 ```
 
 정답예시 코드
+
 ```python
 
-data = input()
+    data = input()
 
-# 첫 번째 문자를 숫자로 변경하여 대입
-result = int(data[0])
+    # 첫 번째 문자를 숫자로 변경하여 대입
+    result = int(data[0])
 
-for i in range(1, len(data)):
-    # 두 수 중에서 하나라도 '0' 혹은 '1'인 경우, 곱하기 보다는 더하기 수행
-    num = int(data[i])
-    if num <= 1 or result <= 1:
-        result += num
-    else:
-        result *= num
+    for i in range(1, len(data)):
+        # 두 수 중에서 하나라도 '0' 혹은 '1'인 경우, 곱하기 보다는 더하기 수행
+        num = int(data[i])
+        if num <= 1 or result <= 1:
+            result += num
+        else:
+            result *= num
 
-print(result)
+    print(result)
 
 ```
 
@@ -112,20 +116,20 @@ print(result)
 
 ```python
 
-n = int(input())
-data = list(map(int, input().split()))
-data.sort()
+    n = int(input())
+    data = list(map(int, input().split()))
+    data.sort()
 
-result = 0  # 총 그룹의 수
-count = 0   # 현재 그룹에 포함된 모험가의 수
+    result = 0  # 총 그룹의 수
+    count = 0   # 현재 그룹에 포함된 모험가의 수
 
-for i in data:          # 공포도를 낮은 것부터 하나씩 확인하며
-    count += 1          # 현재 그룹에 해당 모험가를 포함시키기
-    if count >= i:      # 현재 그룹에 포함된 모험가의 수가 현재의 공포도 이상이라면, 그룹 결성
-        result += 1     # 총 그룹의 수 증가시키기
-        count = 0       # 현재 그룹에 포함된 모험가의 수 초기화
+    for i in data:          # 공포도를 낮은 것부터 하나씩 확인하며
+        count += 1          # 현재 그룹에 해당 모험가를 포함시키기
+        if count >= i:      # 현재 그룹에 포함된 모험가의 수가 현재의 공포도 이상이라면, 그룹 결성
+            result += 1     # 총 그룹의 수 증가시키기
+            count = 0       # 현재 그룹에 포함된 모험가의 수 초기화
 
-print(result)           # 총 그룹의 수 출력
+    print(result)           # 총 그룹의 수 출력
 
 ```
 
@@ -148,18 +152,18 @@ print(result)           # 총 그룹의 수 출력
 
 ```python
 
-# 동, 북, 서, 남
-dx = [0, -1, 0, 1]
-dy = [1, 0, -1, 0]
+    # 동, 북, 서, 남    
+    dx = [0, -1, 0, 1]
+    dy = [1, 0, -1, 0]
 
-# 현재 위치
-x, y = 2, 2
+    # 현재 위치
+    x, y = 2, 2
 
-for i in range(4):
-    # 다음 위치
-    nx = x + dx[i]
-    ny = y + dy[i]
-    print(nx, ny)
+    for i in range(4):
+        # 다음 위치
+        nx = x + dx[i]
+        ny = y + dy[i]
+        print(nx, ny)
 
 ```
 
@@ -169,71 +173,74 @@ for i in range(4):
 ### <문제> 상하좌우
 
 내가 짠 코드
+
 ```python
 
-''' 입력 예시
-5
-R R R U D D
-'''
+    ''' 입력 예시
+    5
+    R R R U D D
+    '''
 
-n = int(input())
-direction_list = input().split()
+    n = int(input())
+    direction_list = input().split()
 
-# 방향성 입력 R L D U
-direct = {'R':0, 'L':1, 'D':2, 'U':3}
-dx = [0, 0, 1, -1]
-dy = [1, -1, 0, 0]
+    # 방향성 입력 R L D U
+    direct = {'R':0, 'L':1, 'D':2, 'U':3}
+    dx = [0, 0, 1, -1]
+    dy = [1, -1, 0, 0]
 
-sx = 0
-sy = 0
+    sx = 0
+    sy = 0
 
-for direction in direction_list:
-    next_directx = dx[direct[direction]]
-    next_directy = dy[direct[direction]]
+    for direction in direction_list:
+        next_directx = dx[direct[direction]]
+        next_directy = dy[direct[direction]]
 
-    next_dx = sx + next_directx
-    next_dy = sy + next_directy
+        next_dx = sx + next_directx
+        next_dy = sy + next_directy
 
-    if next_dx < 0 or next_dy < 0 or next_dx > n-1 or next_dy > n-1:
-        continue
+        if next_dx < 0 or next_dy < 0 or next_dx > n-1 or next_dy > n-1:
+            continue
 
-    sx = next_dx
-    sy = next_dy
+        sx = next_dx
+        sy = next_dy
 
-print(sx+1, sy+1)
+    print(sx+1, sy+1)
+
 ```
 
 
 정답 풀이 코드
 - 시뮬레이션 유형, 구현 유형, 완전 탐색 유형은 서로 유사한 점이 많다는 정도로 기억하면 된다.
+
 ```python
 
-# N 입력 받기
-n = int(input())
-x, y = 1, 1
-plans = input().split()
+    # N 입력 받기
+    n = int(input())
+    x, y = 1, 1
+    plans = input().split()
 
-# L, R, U, D에 따른 이동 방향
-dx = [0,0,-1,1]
-dy = [-1,1,0,0]
-move_types = ['L', 'R', 'U', 'D']
+    # L, R, U, D에 따른 이동 방향
+    dx = [0,0,-1,1]
+    dy = [-1,1,0,0]
+    move_types = ['L', 'R', 'U', 'D']
 
-# 이동 계획을 하나씩 확인하기
-for plan in plans:
-    # 이동 후 좌표 구하기
-    for i in range(len(move_types)):
-        if plan == move_types[i]:
-            nx = x + dx[i]
-            ny = y + dy[i]
-    
-    # 공간을 벗어나는 경우 무시
-    if nx < 1 or ny < 1 or nx > n or ny > n:
-        continue
-    
-    # 이동 수행
-    x, y = nx, ny
+    # 이동 계획을 하나씩 확인하기
+    for plan in plans:
+        # 이동 후 좌표 구하기
+        for i in range(len(move_types)):
+            if plan == move_types[i]:
+                nx = x + dx[i]
+                ny = y + dy[i]
+        
+        # 공간을 벗어나는 경우 무시
+        if nx < 1 or ny < 1 or nx > n or ny > n:
+            continue
+        
+        # 이동 수행
+        x, y = nx, ny
 
-print(x, y)
+    print(x, y)
 
 ```
 
@@ -246,17 +253,17 @@ print(x, y)
 
 ```python
 
-n = int(input())
+    n = int(input())
 
-count = 0
-for i in range(n+1):
-    for j in range(60):
-        for k in range(60):
-            # 매 시각 안에 '3'이 포함되어 있다면 카운트 증가
-            if '3' in str(i) + str(j) + str(k):
-                count += 1
+    count = 0
+    for i in range(n+1):
+        for j in range(60):
+            for k in range(60):
+                # 매 시각 안에 '3'이 포함되어 있다면 카운트 증가
+                if '3' in str(i) + str(j) + str(k):
+                    count += 1
 
-print(count)
+    print(count)
 
 ```
 
@@ -265,30 +272,31 @@ print(count)
 ### <문제> 왕실의 나이트
 
 내가 짠 코드
+
 ```python
 
-# 8x8
-# [a,b,c,d,e,f,g,h]
-columns = 'abcedfgh'
+    # 8x8
+    # [a,b,c,d,e,f,g,h]
+    columns = 'abcedfgh'
 
-location = input()
+    location = input()
 
-start_x = int(location[1])-1
-start_y = columns.find(location[0])
+    start_x = int(location[1])-1
+    start_y = columns.find(location[0])
 
-dx = [-1, 1, -1, 1, -2, -2, 2, 2]
-dy = [-2, -2, 2, 2, -1, 1, -1, 1]
+    dx = [-1, 1, -1, 1, -2, -2, 2, 2]
+    dy = [-2, -2, 2, 2, -1, 1, -1, 1]
 
-count = 0
-for i in range(len(dx)):
-    next_dx = start_x + dx[i]
-    next_dy = start_y + dy[i]
+    count = 0
+    for i in range(len(dx)):
+        next_dx = start_x + dx[i]
+        next_dy = start_y + dy[i]
 
-    if next_dx < 0 or next_dy < 0 or next_dx > 7 or next_dy > 7:
-        continue
-    count += 1
+        if next_dx < 0 or next_dy < 0 or next_dx > 7 or next_dy > 7:
+            continue
+        count += 1
 
-print(count)
+    print(count)
 
 ```
 
@@ -301,26 +309,26 @@ print(count)
 
 ```python
 
-S = input()
+    S = input()
 
-word_list = []
-num_list = []
-answer = ''
+    word_list = []
+    num_list = []
+    answer = ''
 
-for i in range(len(S)):
-  s = S[i]
-  if s.isdigit():
-    num_list.append(int(s))
-  else:
-    word_list.append(s)
+    for i in range(len(S)):
+    s = S[i]
+    if s.isdigit():
+        num_list.append(int(s))
+    else:
+        word_list.append(s)
 
-word_list.sort()
+    word_list.sort()
 
-for word in word_list:
-    answer += word
+    for word in word_list:
+        answer += word
 
-answer += str(sum(num_list))
-print(answer)
+    answer += str(sum(num_list))
+    print(answer)
 
 ```
 - 그렇게 어려운 문제는 아니었다. 주어진 string을 slice로 하나씩 보면서 각각 모아주고 sorting과 sum을 통해 붙여줘야하는 문자를 구해서 정답을 도출해주는 문제
