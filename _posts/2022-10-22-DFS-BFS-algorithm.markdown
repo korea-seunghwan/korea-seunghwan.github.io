@@ -260,21 +260,21 @@ background: "/img/bg-post.jpg"
     result = 0
 
     while queue:
-    x, y, count = queue.popleft()
-    if x == n-1 and y == m-1:
-        result = count
-        break
+        x, y, count = queue.popleft()
+        if x == n-1 and y == m-1:
+            result = count
+            break
 
-    for i in range(len(dx)):
-        next_dx = x + dx[i]
-        next_dy = y + dy[i]
+        for i in range(len(dx)):
+            next_dx = x + dx[i]
+            next_dy = y + dy[i]
 
-        if next_dx < 0 or next_dy < 0 or next_dx > n-1 or next_dy > m-1:
-            continue
+            if next_dx < 0 or next_dy < 0 or next_dx > n-1 or next_dy > m-1:
+                continue
 
-        if graph[next_dx][next_dy] == 1:
-            queue.append((next_dx, next_dy, count+1))
-            graph[next_dx][next_dy] = 0
+            if graph[next_dx][next_dy] == 1:
+                queue.append((next_dx, next_dy, count+1))
+                graph[next_dx][next_dy] = 0
 
     print(result)
 
